@@ -1,0 +1,23 @@
+# Pre-Commit Hook Configuration
+# ===================================================================
+# This file configures the pre-commit framework, which runs a series of
+# automated checks on the code before a commit is finalized. This helps
+# enforce code quality, style, and consistency across the project.
+
+repos:
+  # Repository for Ruff, an extremely fast Python linter and code formatter.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+
+    # Pin to a specific version for reproducible checks.
+    # Run `pre-commit autoupdate` to update to the latest version. Make sure to commit
+    # the updated version to keep the configuration consistent across team members.
+    rev: v0.12.10
+    hooks:
+      # Linter hook: Checks for code errors, style issues, and bugs.
+      - id: ruff
+        # --fix: Attempts to automatically fix any fixable errors.
+        # --exit-non-zero-on-fix: Ensures the commit fails if files were modified,
+        #   prompting the user to stage the new changes.
+        args: [--fix, --exit-non-zero-on-fix]
+      # Formatter hook: Ensures code formatting is consistent.
+      - id: ruff-format
