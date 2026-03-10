@@ -2,14 +2,21 @@
 """Export a Cortex Agent config from Snowflake to a local YAML file.
 
 Usage:
+    # Export a single agent with a timestamped filename:
+    #   configs/agents/my_agent_20260310-153045.yaml
     python scripts/export_agent.py --agent MY_AGENT
+
+    # Export to an explicit path (no timestamp added):
     python scripts/export_agent.py --agent MY_AGENT --out configs/agents/my_agent.yaml
+
+    # Export all agents, each with a timestamped filename:
     python scripts/export_agent.py --all
 """
 
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
 
 from cortex_agent.io.serialize import write_yaml
@@ -44,6 +51,7 @@ def main() -> None:
 
     client = client_from_env()
     default_dir = PROJECT_ROOT / "configs" / "agents"
+    default_dir.mkdir(parents=True, exist_ok=True)
 
     if args.all:
         agents = client.list_agents()
@@ -52,10 +60,15 @@ def main() -> None:
             return
         for entry in agents:
             name = entry["name"]
-            out = default_dir / f"{name.lower()}.yaml"
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            out = default_dir / f"{name.lower()}_{timestamp}.yaml"
             export_one(client, name, out)
     else:
-        out = Path(args.out) if args.out else default_dir / f"{args.agent.lower()}.yaml"
+        if args.out:
+            out = Path(args.out)
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            out = default_dir / f"{args.agent.lower()}_{timestamp}.yaml"
         export_one(client, args.agent, out)
 
     print("Done.")

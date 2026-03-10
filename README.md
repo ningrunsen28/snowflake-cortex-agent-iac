@@ -72,16 +72,21 @@ SNOWFLAKE_SCHEMA="YOUR_SCHEMA"
 
 ### Exporting Agents to YAML
 
-Activate your virtual environment, then run:
+Activate your virtual environment, then export an agent:
 
 ```bash
 python scripts/export_agent.py --agent MY_AGENT
 ```
 
-- Writes to `configs/agents/my_agent.yaml` by default (lowercased name).
-- Uses `AgentConfig.from_describe_response` to parse the `DESCRIBE` response.
+By default this writes a **timestamped** YAML file under `configs/agents/`, for example:
 
-To export to a custom path:
+- `configs/agents/my_agent_20260310-153045.yaml`
+
+This avoids overwriting previous exports, which is especially helpful when you tweak configs in the Snowflake UI and re‑export multiple times.
+
+The script uses `AgentConfig.from_describe_response` to parse the `DESCRIBE` response and `normalize` to produce clean, deterministic YAML.
+
+To export to a custom path (no timestamp added):
 
 ```bash
 python scripts/export_agent.py --agent MY_AGENT --out path/to/agent.yaml
