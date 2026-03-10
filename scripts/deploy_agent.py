@@ -30,7 +30,7 @@ def main() -> None:
     parser.add_argument("--config", help="Explicit path to the YAML config file.")
     parser.add_argument(
         "--mode",
-        default="orReplace",
+        default="ifNotExists",
         choices=["orReplace", "ifNotExists", "errorIfExists"],
         help="Create mode (default: orReplace).",
     )

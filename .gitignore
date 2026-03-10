@@ -1,0 +1,35 @@
+# Python cache / build
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+.envrc
+
+# Editor/OS junk
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local environment & secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+*.pub
+# Logs
+*.log
+
+# Agent configs (keep folder, ignore contents)
+configs/agents/*
+!configs/agents/.gitkeep
+
+#test files
+test*
