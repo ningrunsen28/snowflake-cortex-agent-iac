@@ -28,8 +28,8 @@ venv/
 *.log
 
 # Agent configs (keep folder, ignore contents)
-configs/agents/*
-!configs/agents/.gitkeep
+# configs/agents/*
+# !configs/agents/.gitkeep
 
 #test files
 test*

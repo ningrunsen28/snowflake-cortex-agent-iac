@@ -1,0 +1,198 @@
+name: RN_test_2
+models:
+  orchestration: openai-gpt-4.1
+instructions:
+  response: "You are a senior RGM expert data analyst for a major CPG . You work for a company called Big Bang Beverages who\
+    \ sales beverages in the United States. Your products are sold in multiple stores types across in the top USA cities.\
+    \ You understand key sales concepts like shelf space optimization, promotion lift, product assortment, product placement,\
+    \ promotional placement, floor plans analysis.  You are also familiar with new trends in retails sales like Retail Media\
+    \ networks and digital coupons. \n\nYour goal is to provide clear, actionable insights to the user to increase sales.\
+    \ Be concise and focus on business impact. Avoid technical jargon.\n\nAlways provide a summary of key insights and suggestions\
+    \ to improve sales activities. Consider what other beverage companies are trying to boost their sales activity in retail\
+    \ stores.\n\n*** Formatting rules \nAlways provide detail analysis and charts to back up your analysis. Use multiple charts\
+    \ when you can to visualize your analysis. Use emojis to highlight important information. For example, If you see a large\
+    \ increase in a sales measure then use the rocket emoji. If you see a drop in sales then use an appropriate emoji.\nUse\
+    \ an appropriate emoji when displaying flavors.\n\nMake each section title really stand out. Use bold font weight for\
+    \ emphasis and different font colors to highlight key insights. Use markdown for headers and subheadings.\n*** End Formatting\
+    \ rules\\n\\n\n\n**** Chart Rules\nAlways show a chart when possible to illustrate your analysis. Emphasis any details\
+    \ that you think are important contributing factor to users questions.\n\nWhen creating charts that do not use time-based\
+    \ columns make sure to use different colors for each category/column. \n\nWhen displaying multiple qualitative columns\
+    \ in chart, try use a stacked bar chart.\n\nFor time based trend charts follow these rules:\n1. always show time period\
+    \ on the X-axis\n2.  if the range of dates are less than 2 months than show weeks on X axis\n3. if the range of dates\
+    \ are more are 2 months or more than show months on the X-axis\n4. Make sure to sort the dates from oldest to newest for\
+    \ trend charts. \n5. Show a high and low water mark\n**** End Chart rules\n\nWhen asked to show the Top X of any category/dimension/column\
+    \ and the user doesn't specify a number threshold then limit results to top 7. Tell the user that you are limiting the\
+    \ results \n\nWhen possible, sort quantitative value like Sales, Quantity, Price from large to small. \n\n**** Number\
+    \ formatting rules\nRules for formatting numbers:\n-sales format as USA currency with 0 decimal places.\n-prices show\
+    \ in USA currency with 2 decimal places.\n-quantities show as whole numbers with no decimal places \n- show commas 1000s\
+    \ number placement\n**** End Number formatting rules\n\n**Start Time rules:\nIf no time period is provided then default\
+    \ to current year to date of sales but make sure to tell the user the date ranges that you used. Do not show data in the\
+    \ future; always filter for today and older.\n\nIf a user ask about a promotion then do not filter on time unless specifically\
+    \ told to.\n**End Time rules\n\nDo not consider nulls as a promotion/marketing campaign. \nWhen asked about a promotion\
+    \ campaign, first look at the promo_calendar to obtain information about the brand, promo start date, promo end date,\
+    \ and metropolitan area. Use this information to filter the sales_agent.\n\nThe sales table is at the week level of granularity.\
+    \ the sales date column represents a week ending date for the last 7 days.\n\n**** Start Logic Rules \nConsider the following\
+    \ when doing your data analysis, especially if the user ask for more insights:\n1. Review Promotions  sales their affects.\
+    \ Consider period with a promotion vs no promotion. Consider locations with promotions vs locations with no promotion\
+    \ for same time period.\n2. Identify stores sales that are under performing for a promotion by store chain and metropolitan\
+    \ area\n3. Time of the year that indicate season trends in sales\n4. Same month sales vs prior year sales\n5. Under performing\
+    \ sales by store in store chain within the same metropolitan area\n6. Brands that show a sharp decline in sales over time\n\
+    7. Product Type sales performance. Which product type performs better by sales.\n8. Sales by Metropolitan for the last\
+    \ 6 months for same brand and store chain\n9. Sales at stores with parking vs stores without parking. Parking is indicated\
+    \ as False in the parking column.\n10. Sales for Gluten free products vs non gluten free products.\n11. Look at sales\
+    \ by different sizes for the same product name\n12. Consider health trends in your analysis. For example, the negative\
+    \ affects of certain ingredients like red flavoring, sugar or caffeine \\n13. Impact self check options and parking affect\
+    \ sales?\n**** End Logic Rules \n\nWhen you providing your final overview and suggestions, make note of other popular\
+    \ stores chains for the same store type that do not have any sales activity for a metropolitan. For example: if there\
+    \ are sales for Sam's club but not Costco, suggest Costco as another big box retailer in the same store type.\n\nSummer\
+    \ months are from June to end of September. Fall is from October to November. Holiday season is October to January. Use\
+    \ the major holidays in the US when conducting your analysis.\n\nSend emails that are optimized for rendering across major\
+    \ email clients, including Gmail, Outlook, and Apple Mail, using inline CSS and tables for layout.\n\nInventory amounts\
+    \ are balances captured at the start of the month.\n\nSales amounts are for the whole month.\n\n"
+  orchestration: "When an users ask you a question make sure to research the sales data using sales_agent. \n\nWhen asked\
+    \ about promotions, use the promo_calendar tool to first analyze the promotion dates, location and products. Use this\
+    \ information when querying the sales_agent.\n\nIf you are asked about inventory or quantity on order or on hand then\
+    \ use the Inventory_Balances agent.\n\nif you are asked about sales issues, then look first look at the inventory on hand\
+    \ amounts in the inventory_balances tool  to see if there were issues with stock outs or no inventory on hand.\n\nWhen\
+    \ asked about promotion performance also look at inventory on hand to identify any stores that might have caused weaker\
+    \ promotion performance due to out of stock. Analysis the stores that underperformed for the same store chain across all\
+    \ regions.\n\nWhen asked to identify problems, look at stores with out of stock issues, very low on order amounts, lower\
+    \ sales than other stores in the same chain and metropolitan area.\n\nAlways show a chart when possible to illustrate\
+    \ your analysis. Emphasis any details that you think are important contributing factor to users questions."
+  sample_questions:
+  - question: What are key insights about my brands?
+  - question: Build a brand analysis. Do you see any issues with any brands?
+  - question: What is driving sales in my different regions?
+  - question: How did my marketing campaigns perform?
+  - question: Provide some key insights on the Jolt brand
+  - question: Which Flavors are performing the best?
+  - question: Which stores are underperforming?
+  - question: How are health trends affecting my product sales?
+  - question: How are national health trends affecting my sales?
+tools:
+- tool_spec:
+    type: cortex_analyst_text_to_sql
+    name: Sales_Agent
+    description: |-
+      TABLE1: PRODUCT_DATA_CLEAN
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This table contains comprehensive product catalog information for beverages including energy drinks, sports drinks, and health drinks. It stores detailed product specifications, pricing, nutritional content, and ingredient information. The table serves as the master product reference with PRODUCT_ID as the unique identifier.
+      - Products are categorized by brand, flavor, and type, enabling analysis of product performance across different segments. The table supports ingredient and nutritional analysis with gluten-free indicators for dietary preferences.
+      - LIST OF COLUMNS: PRODUCT_ID (unique identifier - links to SALES_DATA_SUMMARY), BRAND_NAME (manufacturer name), PRODUCT_NAME (full product description), PRODUCT_TYPE (category: Energy/Sports/Health Drink), FLAVOR (taste variety), SIZE_IN_OUNCES (volume), PRICE (retail price), INGREDIENTS (component list), NUTRITIONAL_INFO (calories, sugar, caffeine content), GLUTEN_FREE (dietary indicator)
+
+      TABLE2: SALES_DATA_SUMMARY
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This is the central fact table capturing weekly sales transactions aggregated by store, product, and promotion. It contains sales metrics including quantity sold, sales price, and total revenue. The table uses composite keys of STORE_ID, PRODUCT_ID, and SALES_DATE for unique transaction identification.
+      - This table serves as the bridge connecting product and store dimensions, enabling comprehensive sales analysis across time periods, locations, and promotional campaigns.
+      - LIST OF COLUMNS: STORE_ID (retail location identifier - links to STORE_DATA), PRODUCT_ID (item identifier - links to PRODUCT_DATA_CLEAN), SALES_DATE (transaction date), SALES_WEEK_END_DATE (week ending date for time analysis), PROMOTION_NAME (marketing campaign identifier), QUANTITY (units sold), SALES_PRICE (unit selling price), TOTAL_SALES_REVENUE (total transaction value)
+
+      TABLE3: STORE_DATA
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This table maintains retail store master data including location details, store characteristics, and operational attributes. It contains geographic information (city, state, metropolitan area, road), store classification (chain name, store type), and facility features (size, parking, self-service). STORE_ID serves as the unique identifier.
+      - The table enables geographic and demographic analysis of sales performance across different store formats, chains, and locations. Store attributes like size and amenities support analysis of how physical characteristics impact sales.
+      - LIST OF COLUMNS: STORE_ID (unique store identifier - links to SALES_DATA_SUMMARY), STORE_NAME (store identifier with number), STORE_CHAIN_NAME (retail chain), STORE_TYPE (format: Supermarket/Drug Store/Big Box), CITY (location city), STATE (location state), ROAD (street address), METROPOLITAN_AREA (metro region), STORE_SIZE_SQ_FT (square footage), HAS_PARKING (parking availability), SELF_SERVICE (service model indicator)
+
+      REASONING:
+      This semantic view represents a complete sales analytics system for Big Bang Beverages, integrating product catalog, store locations, and weekly sales transactions. The three tables form a star schema with SALES_DATA_SUMMARY as the fact table connected to PRODUCT_DATA_CLEAN and STORE_DATA as dimension tables through PRODUCT_ID and STORE_ID respectively. This structure enables multi-dimensional analysis of beverage sales performance across products (brands, flavors, types), locations (metropolitan areas, store chains, store types), time periods (weekly sales dates), and promotional campaigns. The relationships support queries ranging from top-selling brands and regional performance to promotion effectiveness and product category trends. The verified queries demonstrate capabilities for analyzing sales by brand, region, flavor, and promotion over various time periods.
+
+      DESCRIPTION:
+      The BIG_BANG_BEVERAGES_SALES semantic view in SNOWFLAKE_AI_DEMO.SALES_MART provides comprehensive weekly sales analytics for beverage products across retail locations. It integrates three core tables: PRODUCT_DATA_CLEAN (product catalog with brands, flavors, nutritional info, and pricing), SALES_DATA_SUMMARY (weekly sales facts with quantity, revenue, and promotions), and STORE_DATA (retail locations with geographic and operational attributes). The tables are connected through PRODUCT_ID linking products to sales transactions and STORE_ID linking stores to sales transactions, forming a star schema that enables multi-dimensional analysis. This view supports analysis of sales performance across product dimensions (brands like Bolt, HydrateMax, Jolt; flavors; product types), geographic dimensions (metropolitan areas, store chains like Kroger, Walmart, Target; store types), temporal dimensions (weekly sales dates), and promotional campaigns, enabling insights into top-selling products, regional performance, promotion effectiveness, and sales trends.
+- tool_spec:
+    type: cortex_analyst_text_to_sql
+    name: promo_calendar_agent
+    description: |-
+      TABLE1: PROMOTIONS
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This table stores comprehensive information about promotional campaigns run by various beverage brands across different metropolitan areas. It tracks the lifecycle of each promotion including timing, geographic targeting, and brand association. The table serves as a central repository for marketing campaign data in the big bang beverages promotion calendar system.
+      - This table enables analysis of promotional effectiveness across different brands, regions, and time periods. It supports queries about active promotions, campaign duration, regional marketing strategies, and brand-specific promotional activities. The data can be used to identify promotional patterns and optimize future marketing initiatives.
+      - LIST OF COLUMNS: BRAND_NAME (the brand name of the beverage product being promoted), METROPOLITAN_AREA (the specific geographic metro region where the promotion is targeted), PROMOTION_NAME (the unique name identifying the specific marketing campaign or promotional offer), PROMOTION_DATE_START (the date when the promotion begins or launches), PROMOTION_DATE_END (the date when the promotion officially concludes).
+
+      REASONING:
+      The BIG_BANG_PROMO_CALENDAR semantic view focuses on promotional campaign management for beverage brands. It contains a single table (PROMOTIONS) that captures all essential aspects of marketing promotions including brand identity, geographic targeting, campaign naming, and temporal boundaries. This view is designed to answer questions about when and where specific brand promotions are running, which brands are actively promoting in particular regions, and the duration of various marketing campaigns. The structure supports both operational queries (finding active promotions) and analytical queries (analyzing promotional patterns across brands and regions).
+
+      DESCRIPTION:
+      The BIG_BANG_PROMO_CALENDAR semantic view provides comprehensive promotional campaign information for big bang beverage brands, stored in the PROMOTIONS table within the SNOWFLAKE_AI_DEMO database and SALES_MART schema. This view tracks promotional offers across multiple beverage brands (such as Electrolyte, Pure Vida, and HydrateMax) and their deployment across various metropolitan areas including Atlanta, Chicago, and Miami. The data includes promotion names, start and end dates, enabling analysis of campaign timing, duration, and geographic distribution. This semantic view is ideal for answering questions about active promotions, brand-specific marketing campaigns, regional promotional strategies, and temporal patterns in promotional activities across different markets and time periods.
+- tool_spec:
+    type: cortex_analyst_text_to_sql
+    name: Inventory_Balances_agent
+    description: |-
+      TABLE1: INVENTORY_OH
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This table captures inventory snapshots at the store and product level, tracking both current stock levels and pending orders. It serves as the central fact table connecting product and store dimensions through foreign key relationships.
+      - The table enables analysis of stock availability, out-of-stock situations (when ON_HAND_AMOUNT = 0), and supply chain issues (when ON_ORDER_AMOUNT = 0). Monthly inventory snapshots allow for trend analysis and identification of stores experiencing inventory challenges.
+      - LIST OF COLUMNS: STORE_ID (unique identifier for store location - links to STORE_DATA), PRODUCT_ID (unique identifier for product - links to PRODUCT_DATA_CLEAN), INVENTORY_DATE (date of inventory snapshot), ON_HAND_AMOUNT (current available stock quantity), ON_ORDER_AMOUNT (quantity pending delivery from suppliers)
+
+      TABLE2: PRODUCT_DATA_CLEAN
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This dimension table contains the product catalog with detailed product attributes including brand, type, and descriptive names. It provides the product context needed to analyze inventory patterns across different product categories and brands.
+      - The table enables product-level analysis and categorization of inventory issues by product type (Sports Drink, Energy Drink, Health Drink) or brand (Jolt, Bolt, HydrateMax). It connects to inventory data through PRODUCT_ID to support product-specific stock analysis.
+      - LIST OF COLUMNS: PRODUCT_ID (unique product identifier - links to INVENTORY_OH), PRODUCT_NAME (full product name including flavor and size), BRAND_NAME (manufacturer or brand owner), PRODUCT_TYPE (product category classification)
+
+      TABLE3: STORE_DATA
+      - Database: SNOWFLAKE_AI_DEMO, Schema: SALES_MART
+      - This dimension table provides store location and organizational details including retail chain affiliation and geographic information. It enables geographic and retail chain analysis of inventory performance across different store locations.
+      - The table supports identification of stores with inventory problems by location or retail chain, allowing for regional and retailer-specific inventory management insights. It connects to inventory data through STORE_ID for store-level analysis.
+      - LIST OF COLUMNS: STORE_ID (unique store identifier - links to INVENTORY_OH), STORE_NAME (store name with identifier), STORE_CHAIN_NAME (retail chain affiliation like Kroger, Target, Walgreens), METROPOLITAN_AREA (city or region where store operates)
+
+      REASONING:
+      This semantic view is designed for comprehensive inventory management and analysis across retail stores. The three tables form a star schema with INVENTORY_OH as the fact table and PRODUCT_DATA_CLEAN and STORE_DATA as dimension tables. The relationships enable multi-dimensional analysis of inventory levels, out-of-stock situations, and supply chain issues across products, stores, retail chains, and geographic regions. The verified queries demonstrate the view's primary use cases: identifying stores with out-of-stock problems and detecting supply chain issues where no inventory is on order. The time dimension allows for monthly trend analysis and current period monitoring.
+
+      DESCRIPTION:
+      The BIG_BANG_INVENTORY semantic view provides comprehensive inventory tracking and analysis across retail stores in the SNOWFLAKE_AI_DEMO.SALES_MART schema. It combines inventory snapshots (INVENTORY_OH) with product details (PRODUCT_DATA_CLEAN) and store information (STORE_DATA) through PRODUCT_ID and STORE_ID relationships. This view enables analysis of stock levels, out-of-stock situations (ON_HAND_AMOUNT = 0), and supply chain issues (ON_ORDER_AMOUNT = 0) across different products, brands, store chains, and metropolitan areas. Users can identify inventory problems by store location, retail chain (Kroger, Target, Walgreens), product type (Sports Drink, Energy Drink, Health Drink), and track monthly inventory trends to support operational decision-making and supply chain management.
+- tool_spec:
+    type: generic
+    name: send_email
+    description: |-
+      PROCEDURE/FUNCTION DETAILS:
+      - Type: Custom Stored Procedure
+      - Language: Python 3.12
+      - Signature: (RECIPIENT_EMAIL VARCHAR, SUBJECT VARCHAR, BODY VARCHAR)
+      - Returns: VARCHAR (success/error message)
+      - Execution: OWNER privileges with CALLED ON NULL INPUT
+      - Volatility: VOLATILE (performs external operations)
+      - Primary Function: Email notification delivery
+      - Target: External email recipients via Snowflake's email integration
+      - Error Handling: Try-catch block with descriptive error messages returned as strings
+
+      DESCRIPTION:
+      This custom stored procedure provides automated email notification capabilities by wrapping Snowflake's SYSTEM$SEND_EMAIL function in a user-friendly Python interface. The procedure accepts three parameters—recipient email address, subject line, and message body—and sends emails through a pre-configured email integration named 'email_integration'. It executes with OWNER privileges, meaning it runs with the permissions of the procedure owner rather than the caller, which is essential for accessing the email integration configuration. The procedure includes built-in security measures such as SQL injection prevention through single-quote escaping in the email body, and returns clear success or error messages to help diagnose delivery issues. This tool is particularly valuable for building automated alerting systems, workflow notifications, or data pipeline monitoring within your Snowflake environment without requiring external orchestration tools.
+      environment
+    input_schema:
+      type: object
+      properties:
+        body:
+          description: Body of the email message
+          type: string
+        recipient_email:
+          description: if an email is not provided, send it to michael.vollmer@sdggroup.com
+          type: string
+        subject:
+          description: A very brief email subject that explains the email contents. Use emojis when appropriate.
+          type: string
+      required:
+      - body
+      - recipient_email
+      - subject
+tool_resources:
+  Inventory_Balances_agent:
+    execution_environment:
+      type: warehouse
+      warehouse: SALES_INTELLIGENCE_WH
+    semantic_view: SNOWFLAKE_AI_DEMO.SALES_MART.BIG_BANG_INVENTORY
+  Sales_Agent:
+    execution_environment:
+      type: warehouse
+      warehouse: SNOWFLAKE_INTELLIGENCE_WH
+    semantic_view: SNOWFLAKE_AI_DEMO.SALES_MART.BIG_BANG_BEVERAGES_SALES
+  promo_calendar_agent:
+    execution_environment:
+      type: warehouse
+      warehouse: SALES_INTELLIGENCE_WH
+    semantic_view: SNOWFLAKE_AI_DEMO.SALES_MART.BIG_BANG_PROMO_CALENDAR
+  send_email:
+    type: procedure
+    execution_environment:
+      type: warehouse
+      warehouse: SNOWFLAKE_INTELLIGENCE_WH
+    identifier: SNOWFLAKE_AI_DEMO.SALES_MART.SEND_EMAIL
+    name: SEND_EMAIL(VARCHAR, VARCHAR, VARCHAR)
