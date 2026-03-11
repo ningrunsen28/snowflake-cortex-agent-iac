@@ -40,7 +40,8 @@ def deploy_semantic_views(
             client.execute_sql(stmt, database=target_db, schema=target_schema)
             print(f"    -> {fq_schema}.{name}")
         except RuntimeError as exc:
-            print(f"    Warning: deploy failed ({exc})")
+            print(f"    Error: semantic view deploy failed ({exc})")
+            raise
 
 
 def deploy_procedures(
@@ -83,7 +84,8 @@ def deploy_procedures(
             client.execute_sql(ddl, database=target_db, schema=target_schema)
             print(f"    -> {target_db}.{target_schema}.{name}")
         except RuntimeError as exc:
-            print(f"    Warning: deploy failed ({exc})")
+            print(f"    Error: procedure deploy failed ({exc})")
+            raise
 
 
 def deploy_dependencies(
