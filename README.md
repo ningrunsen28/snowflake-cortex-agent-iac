@@ -1,11 +1,23 @@
-## Cortex Agent
+## Cortex Agent IaC
 
-Config-as-code workflow for a **Snowflake Cortex Agent**: export the agent config, semantic views, and procedures to version-controlled files, review changes in PRs, and redeploy everything back to Snowflake.
+Config-as-code / IaC workflow for a **Snowflake Cortex Agent**: export the agent config, semantic views, and procedures to version-controlled files, review changes in PRs, and redeploy everything back to Snowflake.
 
 This repository manages **one agent** and all its dependencies. The agent config lives at `configs/agent_config.yaml`, semantic view YAML definitions in `configs/semantic_views/`, and procedure DDL in `configs/procedures/`. Environment variables provide defaults for local dev; CLI flags override them for CI pipelines.
 
+> This repo manages the **Cortex Agent configuration and dev workflow**, not shared account-level components like Web Search or Cortex Search. Those may be integrated as future, shared dependencies but are **not part of the current release**.
+
 ### Features
 
+- **Export everything** — agent config, semantic view YAML (`SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW`), and procedure DDL (`GET_DDL`).
+- **Deploy everything** — semantic views (`SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), procedures, and the agent in one command.
+- **Normalize and validate configs** using Pydantic models.
+- **Reference rewriting** — deploy the same config to any database/schema; FQ names are rewritten at deploy time.
+- **Dev workspaces** — isolated per-developer schemas created from repo files (no Snowflake-to-Snowflake cloning).
+- **GitHub Actions** — automated validation, deployment, workspace creation, and cleanup.
+
+### Features
+
+- **Config-as-code for Cortex Agents** — treat your agent, semantic views, and procedures like application code with PR review, CI validation, and reproducible dev workspaces.
 - **Export everything** — agent config, semantic view YAML (`SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW`), and procedure DDL (`GET_DDL`).
 - **Deploy everything** — semantic views (`SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), procedures, and the agent in one command.
 - **Normalize and validate configs** using Pydantic models.
@@ -17,7 +29,9 @@ This repository manages **one agent** and all its dependencies. The agent config
 
 - Python **3.10+**
 - Network access to your Snowflake account
-- A Snowflake user configured for **key pair authentication**
+- A Snowflake user configured for **key pair authentication**, with:
+  - Privileges to create/drop schemas, semantic views, and procedures in the target database
+  - Access to Snowflake Cortex Agents in the account
 
 Python dependencies are defined in `pyproject.toml` (Pydantic, PyYAML, requests, cryptography, python-dotenv, PyJWT).
 
@@ -35,6 +49,19 @@ Or, if you are using `uv`:
 
 ```bash
 uv sync
+```
+
+### Quickstart
+
+```bash
+# 1) Install
+uv sync  # or: python -m venv .venv && source .venv/bin/activate && pip install -e .
+
+# 2) Create a dev workspace
+python scripts/create_workspace.py --developer YOUR_NAME
+
+# 3) Export changes back from Snowflake
+python scripts/export_agent.py --agent YOUR_DEV_AGENT --database YOUR_DB --schema DEV_YOUR_NAME
 ```
 
 ### Snowflake Configuration
@@ -98,7 +125,7 @@ A developer triggers the **Create Dev Workspace** GitHub Action (or runs the scr
 python scripts/create_workspace.py --developer ALICE
 ```
 
-This creates `DEV_ALICE` schema, deploys semantic views and procedures from the repo config files, and deploys the agent with rewritten references.
+This creates `DEV_ALICE` schema, deploys semantic views and procedures from the repo config files, and deploys the agent with rewritten references. Shared, account-level components (for example, Web Search or Cortex Search) are assumed to be managed separately and are **not** copied into the dev workspace.
 
 #### Step 2: Modify and Test
 
@@ -192,7 +219,7 @@ The following secrets must be configured in the repository:
 | `SNOWFLAKE_DATABASE` | Canonical database |
 | `SNOWFLAKE_SCHEMA` | Canonical schema |
 
-Configure two GitHub Environments: **development** (for workspace create/cleanup) and **production** (for deploy, with required reviewers).
+Configure two GitHub Environments: **development** (for workspace create/cleanup) and **production** (for deploy, with required reviewers). These secrets are consumed by the workflows in `.github/workflows/` to validate configs, create/clean up dev workspaces, and deploy the agent to the canonical schema.
 
 ### Development Notes
 
