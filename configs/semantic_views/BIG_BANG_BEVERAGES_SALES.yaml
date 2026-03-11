@@ -1,0 +1,637 @@
+name: BIG_BANG_BEVERAGES_SALES
+description: "Semantic view for weekly sales by store, promotion, and product"
+tables:
+  - name: PRODUCT_DATA_CLEAN
+    synonyms:
+      - product_data
+      - product_info
+      - product_details
+      - product_catalog
+      - product_inventory
+      - product_list
+      - product_master
+      - product_record
+      - product_specifications
+    description: "This table stores information about various food products, including their brand, name, type, size, flavor, price, ingredients, nutritional information, and gluten-free status, providing a comprehensive dataset for product analysis and comparison."
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: PRODUCT_DATA_CLEAN
+    unique_keys:
+      - columns:
+          - PRODUCT_ID
+    dimensions:
+      - name: BRAND_NAME
+        synonyms:
+          - manufacturer
+          - maker
+          - company_name
+          - product_maker
+          - brand
+          - label
+          - trademark
+          - producer
+        description: "The brand name of the product, indicating the manufacturer or brand owner."
+        expr: BRAND_NAME
+        data_type: VARCHAR(200)
+        cortex_search_service:
+          database: SNOWFLAKE_AI_DEMO
+          schema: SALES_MART
+          service: SI_AI_DEMO_BRANDS
+        sample_values:
+          - Bolt
+          - HydrateMax
+          - Jolt
+      - name: FLAVOR
+        synonyms:
+          - taste
+          - flavor_profile
+          - flavor_type
+          - flavor_name
+          - flavor_description
+          - variety
+          - seasoning
+          - aroma
+        description: "The flavor of the product, which can be one of the following options: Cosmic Punch, Glacier Freeze, or Electric Berry."
+        expr: FLAVOR
+        data_type: VARCHAR(200)
+        sample_values:
+          - Cosmic Punch
+          - Glacier Freeze
+          - Electric Berry
+      - name: GLUTEN_FREE
+        synonyms:
+          - gluten_free_status
+          - gluten_free_ind
+          - gluten_free_flag
+          - gluten_free_option
+          - gluten_free_choice
+          - gluten_free_availability
+          - gluten_free_info
+        description: Indicates whether a product is gluten-free or not.
+        expr: GLUTEN_FREE
+        data_type: VARCHAR(200)
+        sample_values:
+          - "TRUE"
+          - "FALSE"
+      - name: INGREDIENTS
+        synonyms:
+          - components
+          - contents
+          - recipe
+          - formulation
+          - additives
+          - substances
+          - materials
+          - constituents
+        description: List of ingredients used in the product.
+        expr: INGREDIENTS
+        data_type: VARCHAR(200)
+        cortex_search_service:
+          database: SNOWFLAKE_AI_DEMO
+          schema: SALES_MART
+          service: SI_AI_DEMO_PROD_INGREDIENTS
+        sample_values:
+          - "Carbonated Water, High Fructose Corn Syrup, Taurine, Caffeine, B Vitamins"
+          - "Water, Glucose, Sodium Citrate, Potassium Chloride, Natural Flavors"
+          - "Carbonated Water, Sucrose, Guarana, Ginseng, Niacinamide, B12"
+      - name: NUTRITIONAL_INFO
+        synonyms:
+          - nutrition_facts
+          - nutritional_values
+          - nutrition_data
+          - dietary_info
+          - nutritional_content
+          - nutrition_details
+        description: "This column contains the nutritional information for each product, including the number of calories, amount of sugar, and amount of caffeine, providing a comprehensive view of the product's nutritional content."
+        expr: NUTRITIONAL_INFO
+        data_type: VARCHAR(200)
+        sample_values:
+          - "180 cal, 45g sugar, 160mg caffeine"
+          - "120 cal, 30g sugar"
+          - "150 cal, 38g sugar, 120mg caffeine"
+      - name: PRICE
+        synonyms:
+          - msrp
+          - suggested_price
+        description: "The price of each product in the dataset, representing the amount a customer would pay for the item."
+        expr: PRICE
+        data_type: "NUMBER(5,2)"
+        sample_values:
+          - "3.49"
+          - "2.29"
+          - "2.99"
+      - name: PRODUCT_ID
+        synonyms:
+          - product_code
+          - item_id
+          - product_number
+          - sku
+          - item_code
+          - product_key
+          - product_identifier
+        description: Unique identifier for each product in the catalog.
+        expr: PRODUCT_ID
+        data_type: VARCHAR(200)
+        sample_values:
+          - DRK-001
+          - DRK-002
+          - DRK-004
+      - name: PRODUCT_NAME
+        synonyms:
+          - item_name
+          - product_title
+          - product_description
+          - item_description
+          - product_label
+          - product_identifier
+        description: "The name of the product, including the brand, flavor, and size."
+        expr: PRODUCT_NAME
+        data_type: VARCHAR(200)
+        cortex_search_service:
+          database: SNOWFLAKE_AI_DEMO
+          schema: SALES_MART
+          service: SI_AI_DEMO_PRODUCT
+        sample_values:
+          - Bolt Cosmic Punch 16 oz
+          - HydrateMax Glacier Freeze 20 oz
+          - Jolt Electric Berry 12 oz
+      - name: PRODUCT_TYPE
+        synonyms:
+          - item_category
+          - product_classification
+          - product_group
+          - item_kind
+          - product_line
+          - category_name
+          - product_style
+        description: "The type of product being sold, categorized as either an Energy Drink, Sports Drink, or Health Drink, which helps in analyzing sales trends and customer preferences across different product categories."
+        expr: PRODUCT_TYPE
+        data_type: VARCHAR(200)
+        sample_values:
+          - Energy Drink
+          - Sports Drink
+          - Health Drink
+      - name: SIZE_IN_OUNCES
+        synonyms:
+          - volume_in_ounces
+          - ounces_per_unit
+          - weight_in_ounces
+          - ounce_measurement
+          - size_in_fluid_ounces
+          - fluid_ounce_volume
+        description: The size of the product in fluid ounces.
+        expr: SIZE_IN_OUNCES
+        data_type: VARCHAR(200)
+        sample_values:
+          - 16 oz
+          - 20 oz
+          - 12 oz
+  - name: SALES_DATA_SUMMARY
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: SALES_DATA_SUMMARY
+    unique_keys:
+      - columns:
+          - STORE_ID
+      - columns:
+          - PRODUCT_ID
+      - columns:
+          - SALES_DATE
+    dimensions:
+      - name: PRODUCT_ID
+        synonyms:
+          - product_code
+          - item_id
+          - product_number
+          - item_number
+          - sku
+          - stock_code
+          - product_identifier
+        description: Unique identifier for a product in the sales data.
+        expr: PRODUCT_ID
+        data_type: VARCHAR(200)
+      - name: PROMOTION_NAME
+        synonyms:
+          - campaign_name
+          - promo_name
+          - marketing_campaign
+          - sales_promotion
+          - offer_name
+          - discount_name
+          - special_offer
+          - advertisement_name
+        description: The name of the promotional campaign or offer associated with the sales data.
+        expr: PROMOTION_NAME
+        data_type: VARCHAR(200)
+        sample_values:
+          - HydrateMax 2025 Summer Promo
+          - Velocity 2024
+          - Electrolyte 2024 Summer
+          - Pure Vida 2025 Q1
+          - Bolt 2025 Summer
+      - name: STORE_ID
+        synonyms:
+          - store_number
+          - outlet_id
+          - retail_location
+          - shop_id
+          - branch_id
+          - location_id
+          - store_code
+        description: Unique identifier for a retail store location.
+        expr: STORE_ID
+        data_type: VARCHAR(200)
+        sample_values:
+          - "1053"
+          - "1224"
+          - "1230"
+    facts:
+      - name: QUANTITY
+        synonyms:
+          - count
+          - volume
+          - number_of_items
+          - total_items
+          - item_count
+          - quantity_sold
+          - units_sold
+        description: The total number of units sold for a particular product for a week
+        expr: QUANTITY
+        data_type: "NUMBER(6,0)"
+        access_modifier: public_access
+        sample_values:
+          - "56827"
+          - "7556"
+          - "7897"
+        default_aggregation: 1
+      - name: SALES_PRICE
+        synonyms:
+          - unit_price
+          - selling_price
+          - price_per_unit
+          - item_price
+          - cost_per_item
+        description: "The total amount paid by a customer for a product or service, representing the revenue generated from a sale."
+        expr: SALES_PRICE
+        data_type: "NUMBER(5,2)"
+        access_modifier: public_access
+        sample_values:
+          - "2.14"
+          - "5.77"
+          - "5.67"
+        default_aggregation: 4
+      - name: TOTAL_SALES_REVENUE
+        synonyms:
+          - total_revenue
+          - sales_total
+          - revenue_generated
+          - total_sales_amount
+          - total_revenue_earned
+          - sales_revenue_total
+          - total_sales_value
+        description: "The total revenue generated from sales, representing the total amount of money earned from the sale of products or services."
+        expr: TOTAL_SALES_REVENUE
+        data_type: "NUMBER(8,2)"
+        access_modifier: public_access
+        sample_values:
+          - "183183.40"
+          - "172647.73"
+          - "37577.72"
+        default_aggregation: 1
+    time_dimensions:
+      - name: SALES_WEEK_END_DATE
+        synonyms:
+          - weekly_sale_date
+          - purchase_date
+          - date_of_sale
+          - week_ending_date
+        description: Weekending Date on which the sales transaction occurred.
+        expr: SALES_DATE
+        data_type: DATE
+  - name: STORE_DATA
+    synonyms:
+      - STORE_INFORMATION
+      - RETAIL_DATA
+      - SHOP_DETAILS
+      - BUSINESS_LOCATION
+      - MERCHANT_PROFILE
+      - OUTLET_INFO
+      - COMMERCIAL_DATA
+      - RETAILER_DETAILS
+      - STORE_PROFILE
+    description: "This table stores information about retail stores, including their location, size, type, and amenities, allowing for analysis and reporting on store characteristics and demographics."
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: STORE_DATA
+    unique_keys:
+      - columns:
+          - STORE_ID
+    dimensions:
+      - name: CITY
+        synonyms:
+          - town
+          - municipality
+          - metropolis
+          - urban_area
+          - city_name
+          - location
+          - urban_center
+          - metropolitan_area_name
+          - city_location
+        description: The city where the store is located.
+        expr: CITY
+        data_type: VARCHAR(100)
+        sample_values:
+          - Marietta
+          - Aurora
+          - Evanston
+      - name: HAS_PARKING
+        synonyms:
+          - parking_available
+          - parking_facilities
+          - parking_provided
+          - parking_option
+          - parking_availability
+          - parking_status
+        description: Indicates whether a store has a parking facility available for customers.
+        expr: HAS_PARKING
+        data_type: VARCHAR(100)
+        sample_values:
+          - "TRUE"
+          - "FALSE"
+      - name: METROPOLITAN_AREA
+        synonyms:
+          - metro_area
+          - urban_area
+          - region
+          - metropolitan_region
+          - urban_agglomeration
+          - metropolis
+          - metropolitan
+          - district
+          - msa
+        description: "The metropolitan area where a store is located, indicating the city or region in which the store operates."
+        expr: METROPOLITAN_AREA
+        data_type: VARCHAR(100)
+        sample_values:
+          - Atlanta
+          - Denver
+          - Chicago
+      - name: ROAD
+        synonyms:
+          - street
+          - highway
+          - avenue
+          - route
+          - way
+          - thoroughfare
+          - boulevard
+          - drive
+        description: Street name of the store location.
+        expr: ROAD
+        data_type: VARCHAR(100)
+        sample_values:
+          - Johnson Ferry Rd
+          - Colfax Ave
+          - Sherman Ave
+      - name: SELF_SERVICE
+        synonyms:
+          - self_serve
+          - automated_service
+          - self_check_out
+          - self_service_option
+          - self_service_enabled
+          - automated_checkout
+          - self_service_mode
+        description: "Indicates whether the store is a self-service store, where customers select and pay for products on their own, or a full-service store, where customers are assisted by staff throughout the shopping process."
+        expr: SELF_SERVICE
+        data_type: VARCHAR(100)
+        sample_values:
+          - "TRUE"
+          - "FALSE"
+      - name: STATE
+        synonyms:
+          - province
+          - region
+          - territory
+          - county
+          - area
+          - jurisdiction
+          - locale
+          - location
+          - geographical_area
+        description: The two-letter abbreviation for the state where the store is located.
+        expr: STATE
+        data_type: VARCHAR(100)
+        sample_values:
+          - GA
+          - CO
+          - IL
+      - name: STORE_CHAIN_NAME
+        synonyms:
+          - retailer_name
+          - store_brand
+          - store_group
+          - store_family
+          - store_affiliation
+          - parent_company
+          - store_chain
+          - retail_chain_name
+        description: The name of the retail store chain where the data was collected.
+        expr: STORE_CHAIN_NAME
+        data_type: VARCHAR(100)
+        cortex_search_service:
+          database: SNOWFLAKE_AI_DEMO
+          schema: SALES_MART
+          service: SI_AI_DEMO_STORES
+        sample_values:
+          - Kroger
+          - Walgreens
+          - Target
+          - Walmart
+          - Publix
+      - name: STORE_ID
+        synonyms:
+          - store_number
+          - store_code
+          - store_identifier
+          - outlet_id
+          - retail_store_id
+          - location_id
+          - store_key
+        description: Unique identifier for a retail store location.
+        expr: STORE_ID
+        data_type: VARCHAR(100)
+        sample_values:
+          - "1002"
+          - "1003"
+          - "1004"
+      - name: STORE_NAME
+        synonyms:
+          - store_title
+          - retail_name
+          - shop_name
+          - outlet_name
+          - business_name
+          - establishment_name
+          - store_identity
+          - retail_identity
+        description: The name of the store along with its unique identifier.
+        expr: STORE_NAME
+        data_type: VARCHAR(100)
+        sample_values:
+          - Kroger 456
+          - Walgreens 789
+          - Target 101
+      - name: STORE_TYPE
+        synonyms:
+          - store_category
+          - store_format
+          - retail_type
+          - outlet_type
+          - store_classification
+          - store_description
+          - store_kind
+          - retail_format
+          - store_style
+        description: "The type of retail establishment where the product is sold, such as a supermarket, drug store, or big box retailer."
+        expr: STORE_TYPE
+        data_type: VARCHAR(100)
+        sample_values:
+          - Supermarket
+          - Drug Store
+          - Big Box Retailer
+    facts:
+      - name: STORE_SIZE_SQ_FT
+        synonyms:
+          - store_area
+          - square_footage
+          - store_space
+          - floor_area
+          - retail_space
+          - store_footprint
+          - sqft
+          - total_area
+        description: The total square footage of the store.
+        expr: STORE_SIZE_SQ_FT
+        data_type: "NUMBER(8,0)"
+        access_modifier: public_access
+        sample_values:
+          - "120000"
+          - "14000"
+          - "150000"
+relationships:
+  - name: PRODUCT_SALES
+    left_table: PRODUCT_DATA_CLEAN
+    right_table: SALES_DATA_SUMMARY
+    relationship_columns:
+      - left_column: PRODUCT_ID
+        right_column: PRODUCT_ID
+  - name: STORE_SALES
+    left_table: STORE_DATA
+    right_table: SALES_DATA_SUMMARY
+    relationship_columns:
+      - left_column: STORE_ID
+        right_column: STORE_ID
+verified_queries:
+  - name: '"what are top selling brands in august 2025?"'
+    sql: |-
+      SELECT
+        p.brand_name,
+        SUM(s.quantity) AS total_quantity_sold
+      FROM
+        product_data_clean AS p
+        INNER JOIN sales_data_summary AS s ON p.product_id = s.product_id
+      WHERE
+        DATE_TRUNC('MONTH', s.sales_date) = '2025-08-01'
+      GROUP BY
+        p.brand_name
+      ORDER BY
+        total_quantity_sold DESC NULLS LAST
+    question: what are top selling brands in august 2025?
+    verified_at: 1756334873
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false
+  - name: '"What are my promotions?"'
+    sql: |-
+      SELECT
+        DISTINCT s.promotion_name,
+        MIN(s.sales_date) AS start_date,
+        MAX(s.sales_date) AS end_date
+      FROM
+        sales_data_summary AS s
+      WHERE
+        NOT s.promotion_name IS NULL
+      GROUP BY
+        s.promotion_name
+      ORDER BY
+        s.promotion_name
+    question: What are my promotions?
+    verified_at: 1756353281
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false
+  - name: '"What is the worse performing flavor this year?"'
+    sql: |-
+      SELECT
+        p.flavor,
+        MIN(s.sales_date) AS start_date,
+        MAX(s.sales_date) AS end_date,
+        SUM(s.total_sales_revenue) AS total_revenue
+      FROM
+        sales_data_summary AS s
+        INNER JOIN product_data_clean AS p ON p.product_id = s.product_id
+      WHERE
+        DATE_PART('YEAR', s.sales_week_end_date) = 2025
+      GROUP BY
+        p.flavor
+      ORDER BY
+        total_revenue ASC
+      LIMIT
+        1
+    question: What is the worse performing flavor this year?
+    verified_at: 1756353530
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false
+  - name: '"What region has the most sales this year?"'
+    sql: |-
+      SELECT
+        st.metropolitan_area,
+        MIN(s.sales_date) AS start_date,
+        MAX(s.sales_date) AS end_date,
+        SUM(s.total_sales_revenue) AS total_revenue
+      FROM
+        sales_data_summary AS s
+        INNER JOIN store_data AS st ON st.store_id = s.store_id
+      WHERE
+        DATE_PART('YEAR', s.sales_week_end_date) = 2025
+      GROUP BY
+        st.metropolitan_area
+      ORDER BY
+        total_revenue DESC NULLS LAST
+      LIMIT
+        1
+    question: What region has the most sales this year?
+    verified_at: 1756353628
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false
+  - name: '"What are the sales by region"'
+    sql: |-
+      SELECT
+        st.metropolitan_area,
+        MIN(s.sales_date) AS start_date,
+        MAX(s.sales_date) AS end_date,
+        SUM(s.total_sales_revenue) AS total_sales
+      FROM
+        sales_data_summary AS s
+        INNER JOIN store_data AS st ON st.store_id = s.store_id
+      GROUP BY
+        st.metropolitan_area
+      ORDER BY
+        total_sales DESC NULLS LAST
+    question: What are the sales by region
+    verified_at: 1756353708
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false

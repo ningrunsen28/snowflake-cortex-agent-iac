@@ -1,4 +1,4 @@
-name: RN_TEST_2
+name: BIGBANGBEV
 models:
   orchestration: openai-gpt-4.1
 instructions:
@@ -96,7 +96,7 @@ tools:
       This semantic view represents a complete sales analytics system for Big Bang Beverages, integrating product catalog, store locations, and weekly sales transactions. The three tables form a star schema with SALES_DATA_SUMMARY as the fact table connected to PRODUCT_DATA_CLEAN and STORE_DATA as dimension tables through PRODUCT_ID and STORE_ID respectively. This structure enables multi-dimensional analysis of beverage sales performance across products (brands, flavors, types), locations (metropolitan areas, store chains, store types), time periods (weekly sales dates), and promotional campaigns. The relationships support queries ranging from top-selling brands and regional performance to promotion effectiveness and product category trends. The verified queries demonstrate capabilities for analyzing sales by brand, region, flavor, and promotion over various time periods.
 
       DESCRIPTION:
-      The BIG_BANG_BEVERAGES_SALES semantic view in SNOWFLAKE_AI_DEMO.SALES_MART provides comprehensive weekly sales analytics for beverage products across retail locations. It integrates three core tables: PRODUCT_DATA_CLEAN (product catalog with brands, flavors, nutritional info, and pricing), SALES_DATA_SUMMARY (weekly sales facts with quantity, revenue, and promotions), and STORE_DATA (retail locations with geographic and operational attributes). The tables are connected through PRODUCT_ID linking products to sales transactions and STORE_ID linking stores to sales transactions, forming a star schema that enables multi-dimensional analysis. This view supports analysis of sales performance across product dimensions (brands like Bolt, HydrateMax, Jolt; flavors; product types), geographic dimensions (metropolitan areas, store chains like Kroger, Walmart, Target; store types), temporal dimensions (weekly sales dates), and promotional campaigns, enabling insights into top-selling products, regional performance, promotion effectiveness, and sales trends.
+      The BIG_BANG_BEVERAGES_SALES semantic view in SNOW_AI_DEMO_DB.SALES_MART provides comprehensive weekly sales analytics for beverage products across retail locations. It integrates three core tables: PRODUCT_DATA_CLEAN (product catalog with brands, flavors, nutritional info, and pricing), SALES_DATA_SUMMARY (weekly sales facts with quantity, revenue, and promotions), and STORE_DATA (retail locations with geographic and operational attributes). The tables are connected through PRODUCT_ID linking products to sales transactions and STORE_ID linking stores to sales transactions, forming a star schema that enables multi-dimensional analysis. This view supports analysis of sales performance across product dimensions (brands like Bolt, HydrateMax, Jolt; flavors; product types), geographic dimensions (metropolitan areas, store chains like Kroger, Walmart, Target; store types), temporal dimensions (weekly sales dates), and promotional campaigns, enabling insights into top-selling products, regional performance, promotion effectiveness, and sales trends.
 - tool_spec:
     type: cortex_analyst_text_to_sql
     name: promo_calendar_agent
@@ -138,7 +138,7 @@ tools:
       This semantic view is designed for comprehensive inventory management and analysis across retail stores. The three tables form a star schema with INVENTORY_OH as the fact table and PRODUCT_DATA_CLEAN and STORE_DATA as dimension tables. The relationships enable multi-dimensional analysis of inventory levels, out-of-stock situations, and supply chain issues across products, stores, retail chains, and geographic regions. The verified queries demonstrate the view's primary use cases: identifying stores with out-of-stock problems and detecting supply chain issues where no inventory is on order. The time dimension allows for monthly trend analysis and current period monitoring.
 
       DESCRIPTION:
-      The BIG_BANG_INVENTORY semantic view provides comprehensive inventory tracking and analysis across retail stores in the SNOWFLAKE_AI_DEMO.SALES_MART schema. It combines inventory snapshots (INVENTORY_OH) with product details (PRODUCT_DATA_CLEAN) and store information (STORE_DATA) through PRODUCT_ID and STORE_ID relationships. This view enables analysis of stock levels, out-of-stock situations (ON_HAND_AMOUNT = 0), and supply chain issues (ON_ORDER_AMOUNT = 0) across different products, brands, store chains, and metropolitan areas. Users can identify inventory problems by store location, retail chain (Kroger, Target, Walgreens), product type (Sports Drink, Energy Drink, Health Drink), and track monthly inventory trends to support operational decision-making and supply chain management.
+      The BIG_BANG_INVENTORY semantic view provides comprehensive inventory tracking and analysis across retail stores in the SNOW_AI_DEMO_DB.SALES_MART schema. It combines inventory snapshots (INVENTORY_OH) with product details (PRODUCT_DATA_CLEAN) and store information (STORE_DATA) through PRODUCT_ID and STORE_ID relationships. This view enables analysis of stock levels, out-of-stock situations (ON_HAND_AMOUNT = 0), and supply chain issues (ON_ORDER_AMOUNT = 0) across different products, brands, store chains, and metropolitan areas. Users can identify inventory problems by store location, retail chain (Kroger, Target, Walgreens), product type (Sports Drink, Energy Drink, Health Drink), and track monthly inventory trends to support operational decision-making and supply chain management.
 - tool_spec:
     type: generic
     name: send_email
@@ -178,21 +178,21 @@ tool_resources:
     execution_environment:
       type: warehouse
       warehouse: SALES_INTELLIGENCE_WH
-    semantic_view: SNOWFLAKE_AI_DEMO.SALES_MART.BIG_BANG_INVENTORY
+    semantic_view: SNOW_AI_DEMO_DB.SALES_MART.BIG_BANG_INVENTORY
   Sales_Agent:
     execution_environment:
       type: warehouse
       warehouse: SNOWFLAKE_INTELLIGENCE_WH
-    semantic_view: SNOWFLAKE_AI_DEMO.SALES_MART.BIG_BANG_BEVERAGES_SALES
+    semantic_view: SNOW_AI_DEMO_DB.SALES_MART.BIG_BANG_BEVERAGES_SALES
   promo_calendar_agent:
     execution_environment:
       type: warehouse
       warehouse: SALES_INTELLIGENCE_WH
-    semantic_view: SNOWFLAKE_AI_DEMO.SALES_MART.BIG_BANG_PROMO_CALENDAR
+    semantic_view: SNOW_AI_DEMO_DB.SALES_MART.BIG_BANG_PROMO_CALENDAR
   send_email:
     type: procedure
     execution_environment:
       type: warehouse
       warehouse: SNOWFLAKE_INTELLIGENCE_WH
-    identifier: SNOWFLAKE_AI_DEMO.SALES_MART.SEND_EMAIL
+    identifier: SNOW_AI_DEMO_DB.SALES_MART.SEND_EMAIL
     name: SEND_EMAIL(VARCHAR, VARCHAR, VARCHAR)
