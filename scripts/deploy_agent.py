@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Deploy a Cortex Agent config from YAML to Snowflake.
+"""Deploy semantic views, procedures, and the Cortex Agent to Snowflake.
 
-All flags fall back to environment variables / config defaults when omitted,
-so local dev needs minimal args while CI pipelines can override everything.
+Deploys in order:
+  1. Semantic views  (from configs/semantic_views/*.yaml)
+  2. Procedures      (from configs/procedures/*.sql)
+  3. Agent config    (from configs/agent_config.yaml)
 
 When --database / --schema differ from the canonical env vars, all
-fully-qualified object references in the config (semantic views,
-procedures, etc.) are rewritten to the target database/schema
-automatically.
+fully-qualified object references in the agent config are rewritten to
+the target database/schema automatically.  Procedure DDL is also
+rewritten.  Semantic view YAML is deployed as-is (base_table refs
+point to the shared data tables).
 
 Usage:
-    # Local dev — uses env defaults, config from configs/agent_config.yaml
     python scripts/deploy_agent.py
 
-    # CI — deploy feature-branch config to a dev schema under a different name
     python scripts/deploy_agent.py \
-        --config configs/agent_config.yaml \
         --agent MY_AGENT_DEV \
         --database DEV_DB \
         --schema DEV_SCHEMA \
@@ -28,6 +28,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from cortex_agent.deploy import deploy_dependencies
 from cortex_agent.io.serialize import read_yaml
 from cortex_agent.model.agent_config import AgentConfig, rewrite_references
 from cortex_agent.snowflake.rest_client import (
@@ -36,12 +37,13 @@ from cortex_agent.snowflake.rest_client import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "agent_config.yaml"
+CONFIGS_DIR = PROJECT_ROOT / "configs"
+DEFAULT_CONFIG = CONFIGS_DIR / "agent_config.yaml"
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Deploy Cortex Agent config to Snowflake.",
+        description="Deploy semantic views, procedures, and agent to Snowflake.",
     )
     parser.add_argument(
         "--config",
@@ -73,13 +75,26 @@ def main() -> None:
         print(f"Error: config file not found: {args.config}", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Loading config: {args.config}")
-    spec = read_yaml(args.config)
-
     canonical_db, canonical_schema = canonical_db_schema_from_env()
     target_db = args.database or canonical_db
     target_schema = args.schema or canonical_schema
 
+    client = client_from_env(database=args.database, schema=args.schema)
+
+    # ---- 1. Deploy dependencies (semantic views + procedures) --------
+    print("Deploying dependencies ...")
+    deploy_dependencies(
+        client,
+        CONFIGS_DIR,
+        target_db,
+        target_schema,
+        canonical_db,
+        canonical_schema,
+    )
+
+    # ---- 2. Deploy agent config --------------------------------------
+    print(f"Loading config: {args.config}")
+    spec = read_yaml(args.config)
     spec = rewrite_references(
         spec, canonical_db, canonical_schema, target_db, target_schema
     )
@@ -90,7 +105,6 @@ def main() -> None:
 
     body = config.to_create_body()
 
-    client = client_from_env(database=args.database, schema=args.schema)
     print(
         f"Deploying agent '{config.name}' to {target_db}.{target_schema} (mode={args.mode}) ..."
     )
