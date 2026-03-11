@@ -7,6 +7,10 @@ on:
         description: "Developer identifier used when creating the workspace (maps to DEV_<DEVELOPER>)"
         required: true
         type: string
+      database:
+        description: "Target database (leave empty to use SNOWFLAKE_DATABASE env var)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -42,6 +46,9 @@ jobs:
           SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
         run: |
-          DEVELOPER="${{ inputs.developer }}"
-          echo "Cleaning up workspace for developer: $DEVELOPER"
-          python scripts/cleanup_workspace.py --developer "$DEVELOPER"
+          args="--developer ${{ inputs.developer }}"
+          if [ -n "${{ inputs.database }}" ]; then
+            args="$args --database ${{ inputs.database }}"
+          fi
+          echo "Cleaning up workspace with args: $args"
+          python scripts/cleanup_workspace.py $args

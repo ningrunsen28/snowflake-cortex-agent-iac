@@ -125,7 +125,7 @@ On merge to `develop` or `main`, the **Deploy Agent** workflow deploys the confi
 
 #### Step 6: Cleanup
 
-When you are finished with a dev workspace, run the **Cleanup Dev Workspace** GitHub Action (or `cleanup_workspace.py` locally) with the same `--developer` identifier; it drops the dev agent and the `DEV_<DEVELOPER>` schema.
+When you are finished with a dev workspace, run the **Cleanup Dev Workspace** GitHub Action (or `cleanup_workspace.py` locally) with the same `--developer` identifier (and, if you overrode it during creation, the same `--database`); it drops the dev agent and the `DEV_<DEVELOPER>` schema.
 
 ### Reference Rewriting
 
