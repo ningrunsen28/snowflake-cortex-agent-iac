@@ -95,10 +95,10 @@ src/cortex_agent/
 A developer triggers the **Create Dev Workspace** GitHub Action (or runs the script locally) to get an isolated schema:
 
 ```bash
-python scripts/create_workspace.py --developer runsen
+python scripts/create_workspace.py --developer ALICE
 ```
 
-This creates `DEV_RUNSEN` schema, deploys semantic views and procedures from the repo config files, and deploys the agent with rewritten references.
+This creates `DEV_ALICE` schema, deploys semantic views and procedures from the repo config files, and deploys the agent with rewritten references.
 
 #### Step 2: Modify and Test
 
@@ -110,9 +110,9 @@ Export the tested config, semantic views, and procedures back to the repo. Agent
 
 ```bash
 python scripts/export_agent.py \
-    --agent MY_AGENT_DEV_RUNSEN \
+    --agent MY_AGENT_DEV_ALICE \
     --database SNOWFLAKE_AI_DEMO \
-    --schema DEV_RUNSEN
+    --schema DEV_ALICE
 ```
 
 #### Step 4: Review Changes
@@ -201,7 +201,5 @@ Configure two GitHub Environments: **development** (for workspace create/cleanup
 - `rewrite_references` in `agent_config.py` does a recursive string replacement of `SOURCE_DB.SOURCE_SCHEMA` with `TARGET_DB.TARGET_SCHEMA` across the entire config dict.
 - Semantic views are exported/deployed via Snowflake system functions (`SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW` / `SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), not stage files or CLONE.
 - Procedure DDL is exported via `GET_DDL` and re-executed with schema rewriting on deploy.
+- Future work: support shared components such as **Web Search** and **Cortex Search** that are managed once per account and **not copied into per-developer workspaces** during `create_workspace.py` / workspace Actions runs. This behavior is **not implemented in the current release** and is a possible future enhancement.
 
-### License
-
-Internal / proprietary. Do not distribute without permission.
