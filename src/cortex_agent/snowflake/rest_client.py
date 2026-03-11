@@ -111,8 +111,8 @@ class CortexAgentClient:
         return resp.json()
 
 
-def client_from_env() -> CortexAgentClient:
-    """Build a CortexAgentClient from environment variables / .env file."""
+def _load_env():
+    """Load .env file and return a helper to require env vars."""
     import os
 
     from dotenv import load_dotenv
@@ -124,6 +124,19 @@ def client_from_env() -> CortexAgentClient:
         if not val:
             raise ValueError(f"Missing required env var: {key}")
         return val
+
+    return os, _require
+
+
+def agent_name_from_env() -> str:
+    """Read the agent name from the CORTEX_AGENT_NAME env var."""
+    os, _require = _load_env()
+    return _require("CORTEX_AGENT_NAME")
+
+
+def client_from_env() -> CortexAgentClient:
+    """Build a CortexAgentClient from environment variables / .env file."""
+    os, _require = _load_env()
 
     return CortexAgentClient(
         account=_require("SNOWFLAKE_ACCOUNT"),

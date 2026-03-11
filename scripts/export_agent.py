@@ -1,78 +1,53 @@
 #!/usr/bin/env python3
-"""Export a Cortex Agent config from Snowflake to a local YAML file.
+"""Export the Cortex Agent config from Snowflake to configs/agent_config.yaml.
+
+The agent name is read from the CORTEX_AGENT_NAME environment variable.
 
 Usage:
-    # Export a single agent with a timestamped filename:
-    #   configs/agents/my_agent_20260310-153045.yaml
-    python scripts/export_agent.py --agent MY_AGENT
-
-    # Export to an explicit path (no timestamp added):
-    python scripts/export_agent.py --agent MY_AGENT --out configs/agents/my_agent.yaml
-
-    # Export all agents, each with a timestamped filename:
-    python scripts/export_agent.py --all
+    python scripts/export_agent.py
 """
 
 from __future__ import annotations
 
-import argparse
-from datetime import datetime
 from pathlib import Path
 
 from cortex_agent.io.serialize import write_yaml
 from cortex_agent.model.agent_config import AgentConfig, normalize
-from cortex_agent.snowflake.rest_client import client_from_env
+from cortex_agent.snowflake.rest_client import agent_name_from_env, client_from_env
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CONFIG_PATH = PROJECT_ROOT / "configs" / "agent_config.yaml"
 
 
-def export_one(client, agent_name: str, out_path: Path) -> None:
+def export_agent() -> None:
+    agent_name = agent_name_from_env()
+    client = client_from_env()
+
     print(f"Exporting agent '{agent_name}' ...")
     raw = client.describe(agent_name)
     config = AgentConfig.from_describe_response(raw)
     data = normalize(config)
-    write_yaml(data, out_path)
-    print(f"  -> {out_path}")
 
-
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Export Cortex Agent config to YAML.")
-    parser.add_argument("--agent", help="Name of the agent to export.")
-    parser.add_argument(
-        "--out", help="Output YAML path (default: configs/agents/<name>.yaml)."
-    )
-    parser.add_argument(
-        "--all", action="store_true", help="Export all agents in the database/schema."
-    )
-    args = parser.parse_args()
-
-    if not args.agent and not args.all:
-        parser.error("Provide --agent <name> or --all.")
-
-    client = client_from_env()
-    default_dir = PROJECT_ROOT / "configs" / "agents"
-    default_dir.mkdir(parents=True, exist_ok=True)
-
-    if args.all:
-        agents = client.list_agents()
-        if not agents:
-            print("No agents found.")
-            return
-        for entry in agents:
-            name = entry["name"]
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            out = default_dir / f"{name.lower()}_{timestamp}.yaml"
-            export_one(client, name, out)
-    else:
-        if args.out:
-            out = Path(args.out)
-        else:
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            out = default_dir / f"{args.agent.lower()}_{timestamp}.yaml"
-        export_one(client, args.agent, out)
-
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    write_yaml(data, CONFIG_PATH)
+    print(f"  -> {CONFIG_PATH}")
     print("Done.")
 
 
+# def main() -> None:
+#     agent_name = agent_name_from_env()
+#     client = client_from_env()
+
+#     print(f"Exporting agent '{agent_name}' ...")
+#     raw = client.describe(agent_name)
+#     config = AgentConfig.from_describe_response(raw)
+#     data = normalize(config)
+
+#     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+#     write_yaml(data, CONFIG_PATH)
+#     print(f"  -> {CONFIG_PATH}")
+#     print("Done.")
+
+
 if __name__ == "__main__":
-    main()
+    export_agent()
