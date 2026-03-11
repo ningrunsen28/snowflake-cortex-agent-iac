@@ -1,4 +1,4 @@
-name: RN_test_2
+name: RN_TEST_2
 models:
   orchestration: openai-gpt-4.1
 instructions:
