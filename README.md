@@ -6,14 +6,18 @@ This repository manages **one agent** and all its dependencies. The agent config
 
 > This repo manages the **Cortex Agent configuration and dev workflow**, not shared account-level components like Web Search or Cortex Search. Those may be integrated as future, shared dependencies but are **not part of the current release**.
 
-### Features
+### GitHub Actions & Workflows
 
-- **Export everything** — agent config, semantic view YAML (`SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW`), and procedure DDL (`GET_DDL`).
-- **Deploy everything** — semantic views (`SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), procedures, and the agent in one command.
-- **Normalize and validate configs** using Pydantic models.
-- **Reference rewriting** — deploy the same config to any database/schema; FQ names are rewritten at deploy time.
-- **Dev workspaces** — isolated per-developer schemas created from repo files (no Snowflake-to-Snowflake cloning).
-- **GitHub Actions** — automated validation, deployment, workspace creation, and cleanup.
+The main way to work with this repo is through **GitHub Actions**. Dev workspaces are created from the Actions UI (no need to run scripts in CI yourself); developers then use a **feature branch** and only update **`.env`** locally to point at their dev schema and agent.
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| **Create Dev Workspace** | Manual (`workflow_dispatch`) | Creates `DEV_<DEVELOPER>` schema, deploys semantic views + procedures + agent from repo files. Input: `developer` (required), `database` (optional). |
+| **Cleanup Dev Workspace** | Manual | Drops the dev agent and `DEV_<DEVELOPER>` schema. Same inputs as create. |
+| **Validate PR** | Pull request to `develop` / `main` (when `configs/` or `src/` change) | Validates `configs/agent_config.yaml` against the AgentConfig schema. |
+| **Deploy Agent** | Push to `develop` / `main` (when `configs/agent_config.yaml` changes), or manual | Deploys semantic views, procedures, and agent to the **canonical** (production) schema. |
+
+Workflows use repository **secrets** and **variables** (and the **development** / **production** environments). See [GitHub Actions Secrets](#github-actions-secrets) below.
 
 ### Features
 
@@ -53,15 +57,14 @@ uv sync
 
 ### Quickstart
 
+After creating a dev workspace via **Actions → Create Dev Workspace** (see [Developer Workflow](#developer-workflow-sop)) and setting `.env` to your dev schema/agent:
+
 ```bash
 # 1) Install
 uv sync  # or: python -m venv .venv && source .venv/bin/activate && pip install -e .
 
-# 2) Create a dev workspace
-python scripts/create_workspace.py --developer YOUR_NAME
-
-# 3) Export changes back from Snowflake
-python scripts/export_agent.py --agent YOUR_DEV_AGENT --database YOUR_DB --schema DEV_YOUR_NAME
+# 2) Export changes back from your dev copy (uses .env if set)
+python scripts/export_agent.py
 ```
 
 ### Snowflake Configuration
@@ -72,7 +75,7 @@ This project expects **key pair authentication** and a Cortex Agents-enabled Sno
    - Follow Snowflake's key pair auth docs to generate an RSA key pair.
    - Save the **private key** (e.g. `rsa_key.pem`) on the machine running these scripts.
 
-2. **Set environment variables** (e.g. via `.env` in the project root):
+2. **Set environment variables** (e.g. via `.env` in the project root; `.env` is gitignored so each developer can point at their own dev schema):
 
 ```bash
 CORTEX_AGENT_NAME="MY_AGENT"
@@ -117,42 +120,52 @@ src/cortex_agent/
 
 ### Developer Workflow (SOP)
 
-#### Step 1: Create Dev Workspace
+#### Step 1: Create Dev Workspace (GitHub Actions)
 
-A developer triggers the **Create Dev Workspace** GitHub Action (or runs the script locally) to get an isolated schema:
+In the repo, go to **Actions → Create Dev Workspace**, run the workflow, and enter your **developer** id (e.g. `alice`). Optionally set **database** if you override the default. The workflow creates `DEV_ALICE` schema, deploys semantic views and procedures from the repo, and deploys the agent with references rewritten to that schema. Shared components (e.g. Web Search, Cortex Search) are not copied into the dev workspace.
 
-```bash
-python scripts/create_workspace.py --developer ALICE
-```
+You can also run locally: `python scripts/create_workspace.py --developer ALICE`.
 
-This creates `DEV_ALICE` schema, deploys semantic views and procedures from the repo config files, and deploys the agent with rewritten references. Shared, account-level components (for example, Web Search or Cortex Search) are assumed to be managed separately and are **not** copied into the dev workspace.
+#### Step 2: Feature Branch and Local .env
 
-#### Step 2: Modify and Test
-
-Edit the agent configuration or semantic views directly in **Snowsight** within the `DEV_<DEVELOPER>` schema. Test queries and behavior interactively.
-
-#### Step 3: Export Configuration
-
-Export the tested config, semantic views, and procedures back to the repo. Agent config references are normalized back to canonical automatically:
+Create a **feature branch** from `develop`. To run export (and other scripts) against **your** dev copy, you only need to point your local environment at it. Copy or edit **`.env`** in the project root (it is gitignored) so that it targets your dev schema and, if you like, the dev agent name:
 
 ```bash
-python scripts/export_agent.py \
-    --agent MY_AGENT_DEV_ALICE \
-    --database SNOWFLAKE_AI_DEMO \
-    --schema DEV_ALICE
+# Example: work against DEV_ALICE workspace
+SNOWFLAKE_SCHEMA=DEV_ALICE
+# Optional: default export/deploy to use dev agent name
+CORTEX_AGENT_NAME=BIGBANGBEV_DEV_ALICE
 ```
 
-#### Step 4: Review Changes
+Other vars (`SNOWFLAKE_DATABASE`, `SNOWFLAKE_ACCOUNT`, etc.) stay the same. No code changes required — only `.env` for your copy.
 
-Create a pull request. The **Validate PR** workflow runs automatically to check that the YAML is valid against the `AgentConfig` schema.
+#### Step 3: Modify and Test
 
-#### Step 5: Deploy
+Edit the agent configuration or semantic views in **Snowsight** in the `DEV_<DEVELOPER>` schema. Test queries and behavior there.
 
-On merge to `develop` or `main`, the **Deploy Agent** workflow deploys the config to the canonical (production) schema using `--mode orReplace`.
+#### Step 4: Export Configuration
 
-#### Step 6: Cleanup
+Export the tested config, semantic views, and procedures back into the repo. With `.env` set to your dev schema/agent, you can run (flags optional if env is set):
 
-When you are finished with a dev workspace, run the **Cleanup Dev Workspace** GitHub Action (or `cleanup_workspace.py` locally) with the same `--developer` identifier (and, if you overrode it during creation, the same `--database`); it drops the dev agent and the `DEV_<DEVELOPER>` schema.
+```bash
+python scripts/export_agent.py
+# Or explicitly:
+python scripts/export_agent.py --agent BIGBANGBEV_DEV_ALICE --database SNOW_AI_DEMO_DB --schema DEV_ALICE
+```
+
+References in the exported files are normalized back to **canonical** DB/schema so git stays environment-agnostic.
+
+#### Step 5: Review Changes
+
+Open a pull request to `develop` (or `main`). The **Validate PR** workflow runs automatically on the changed config.
+
+#### Step 6: Deploy
+
+On merge to `develop` or `main`, the **Deploy Agent** workflow deploys to the canonical (production) schema.
+
+#### Step 7: Cleanup
+
+When done with the dev workspace, run **Actions → Cleanup Dev Workspace** with the same `developer` (and `database` if you used it). Or run `python scripts/cleanup_workspace.py --developer ALICE` locally.
 
 ### Reference Rewriting
 
