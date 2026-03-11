@@ -1,20 +1,17 @@
 ## Cortex Agent
 
-Config-as-code workflow for **Snowflake Cortex Agents**: export existing agents to YAML, review them in version control, and redeploy changes back to Snowflake.
+Config-as-code workflow for a **Snowflake Cortex Agent**: export the agent config, semantic views, and procedures to version-controlled files, review changes in PRs, and redeploy everything back to Snowflake.
 
-This repository provides:
-
-- **Typed models** (`AgentConfig`) that mirror the Cortex Agent REST schema.
-- **CLI-style scripts** to export and deploy agents:
-  - `scripts/export_agent.py`
-  - `scripts/deploy_agent.py`
+This repository manages **one agent** and all its dependencies. The agent config lives at `configs/agent_config.yaml`, semantic view YAML definitions in `configs/semantic_views/`, and procedure DDL in `configs/procedures/`. Environment variables provide defaults for local dev; CLI flags override them for CI pipelines.
 
 ### Features
 
-- **Export agents to YAML** for audit, review, and change tracking.
+- **Export everything** — agent config, semantic view YAML (`SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW`), and procedure DDL (`GET_DDL`).
+- **Deploy everything** — semantic views (`SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), procedures, and the agent in one command.
 - **Normalize and validate configs** using Pydantic models.
-- **Deploy agents from YAML** to Snowflake via the Cortex Agents REST API.
-- **Environment-based configuration** via `.env` and key pair auth.
+- **Reference rewriting** — deploy the same config to any database/schema; FQ names are rewritten at deploy time.
+- **Dev workspaces** — isolated per-developer schemas created from repo files (no Snowflake-to-Snowflake cloning).
+- **GitHub Actions** — automated validation, deployment, workspace creation, and cleanup.
 
 ### Requirements
 
@@ -42,15 +39,16 @@ uv sync
 
 ### Snowflake Configuration
 
-This project expects **key pair authentication** and a Cortex Agents–enabled Snowflake account.
+This project expects **key pair authentication** and a Cortex Agents-enabled Snowflake account.
 
-1. **Create a key pair** and upload the public key to the Snowflake user used for the agent:
-   - Follow Snowflake’s key pair auth docs to generate an RSA key pair.
+1. **Create a key pair** and upload the public key to the Snowflake user:
+   - Follow Snowflake's key pair auth docs to generate an RSA key pair.
    - Save the **private key** (e.g. `rsa_key.pem`) on the machine running these scripts.
 
 2. **Set environment variables** (e.g. via `.env` in the project root):
 
 ```bash
+CORTEX_AGENT_NAME="MY_AGENT"
 SNOWFLAKE_ACCOUNT="your_account_identifier"
 SNOWFLAKE_USER="your_user"
 SNOWFLAKE_PRIVATE_KEY_PATH="rsa_key.pem"
@@ -60,103 +58,150 @@ SNOWFLAKE_DATABASE="YOUR_DATABASE"
 SNOWFLAKE_SCHEMA="YOUR_SCHEMA"
 ```
 
-`cortex_agent.snowflake.rest_client.client_from_env` loads these values using `python-dotenv`.
+`CORTEX_AGENT_NAME` identifies which agent this repo manages. `SNOWFLAKE_DATABASE` and `SNOWFLAKE_SCHEMA` define the **canonical** (production) location. All values are loaded by `client_from_env` using `python-dotenv` and can be overridden by CLI flags.
 
 ### Directory Layout
 
-- `configs/agents/` – YAML definitions for agents (exported and ready to deploy).
-- `scripts/export_agent.py` – Export existing Cortex Agents to YAML.
-- `scripts/deploy_agent.py` – Deploy a YAML agent definition to Snowflake.
-- `src/cortex_agent/model/agent_config.py` – Pydantic models for the agent spec.
-- `src/cortex_agent/snowflake/rest_client.py` – Thin REST client for the Cortex Agents API.
-
-### Exporting Agents to YAML
-
-Activate your virtual environment, then export an agent:
-
-```bash
-python scripts/export_agent.py --agent MY_AGENT
+```
+configs/
+  agent_config.yaml               # Agent config (single source of truth)
+  semantic_views/                  # Semantic view YAML definitions
+    BIG_BANG_BEVERAGES_SALES.yaml
+    BIG_BANG_PROMO_CALENDAR.yaml
+    BIG_BANG_INVENTORY.yaml
+  procedures/                      # Procedure DDL (CREATE PROCEDURE ...)
+    SEND_EMAIL.sql
+scripts/
+  export_agent.py                  # Export agent + semantic views + procedures
+  deploy_agent.py                  # Deploy semantic views + procedures + agent
+  create_workspace.py              # Create a dev workspace from repo files
+  cleanup_workspace.py             # Tear down a dev workspace
+.github/workflows/
+  create-workspace.yml             # Manual: create dev workspace
+  validate-pr.yml                  # On PR: validate agent config YAML
+  deploy.yml                       # On merge: deploy to production
+  cleanup.yml                      # Manual: cleanup dev workspace
+src/cortex_agent/
+  deploy.py                        # Shared deploy logic (semantic views + procedures)
+  model/agent_config.py            # Pydantic models + reference rewriting
+  snowflake/rest_client.py         # REST client (Agents API + SQL API)
+  io/serialize.py                  # YAML/JSON helpers
 ```
 
-By default this writes a **timestamped** YAML file under `configs/agents/`, for example:
+### Developer Workflow (SOP)
 
-- `configs/agents/my_agent_20260310-153045.yaml`
+#### Step 1: Create Dev Workspace
 
-This avoids overwriting previous exports, which is especially helpful when you tweak configs in the Snowflake UI and re‑export multiple times.
-
-The script uses `AgentConfig.from_describe_response` to parse the `DESCRIBE` response and `normalize` to produce clean, deterministic YAML.
-
-To export to a custom path (no timestamp added):
+A developer triggers the **Create Dev Workspace** GitHub Action (or runs the script locally) to get an isolated schema:
 
 ```bash
-python scripts/export_agent.py --agent MY_AGENT --out path/to/agent.yaml
+python scripts/create_workspace.py --developer runsen
 ```
 
-To export **all agents** in the configured database/schema:
+This creates `DEV_RUNSEN` schema, deploys semantic views and procedures from the repo config files, and deploys the agent with rewritten references.
+
+#### Step 2: Modify and Test
+
+Edit the agent configuration or semantic views directly in **Snowsight** within the `DEV_<DEVELOPER>` schema. Test queries and behavior interactively.
+
+#### Step 3: Export Configuration
+
+Export the tested config, semantic views, and procedures back to the repo. Agent config references are normalized back to canonical automatically:
 
 ```bash
-python scripts/export_agent.py --all
+python scripts/export_agent.py \
+    --agent MY_AGENT_DEV_RUNSEN \
+    --database SNOWFLAKE_AI_DEMO \
+    --schema DEV_RUNSEN
 ```
 
-YAML files are normalized (stable key order, `None` values stripped) for clean diffs.
+#### Step 4: Review Changes
 
-### Deploying Agents from YAML
+Create a pull request. The **Validate PR** workflow runs automatically to check that the YAML is valid against the `AgentConfig` schema.
 
-Given a YAML file like `configs/agents/bigbangbev.yaml`, you can deploy it as a Cortex Agent.
-The agent name is read from the `name` field inside the YAML file.
+#### Step 5: Deploy
 
-```bash
-python scripts/deploy_agent.py configs/agents/bigbangbev.yaml
-```
+On merge to `develop` or `main`, the **Deploy Agent** workflow deploys the config to the canonical (production) schema using `--mode orReplace`.
 
-This:
+#### Step 6: Cleanup
 
-- Validates the YAML against `AgentConfig`.
-- Reads the agent name from the `name` field in the config.
-- Calls `CortexAgentClient.create` with the resulting JSON body.
+When you are finished with a dev workspace, run the **Cleanup Dev Workspace** GitHub Action (or `cleanup_workspace.py` locally) with the same `--developer` identifier; it drops the dev agent and the `DEV_<DEVELOPER>` schema.
 
-#### Create modes
+### Reference Rewriting
 
-The `--mode` flag controls how Snowflake handles existing agents (default: `ifNotExists`):
+The YAML in git always uses **canonical** database/schema names (from env vars). When deploying to a different target, all `DB.SCHEMA.*` references in `tool_resources` (semantic views, procedures, etc.) are rewritten automatically:
 
-- `orReplace` – create or replace the agent.
-- `ifNotExists` – only create if the agent does **not** already exist.
-- `errorIfExists` – fail if the agent already exists.
+- **On deploy** (`deploy_agent.py`): canonical refs -> target refs
+- **On export** (`export_agent.py`): source (dev) refs -> canonical refs
 
-Example:
+This keeps the config in git environment-agnostic while ensuring each deployment points to the correct objects.
 
-```bash
-python scripts/deploy_agent.py configs/agents/bigbangbev.yaml --mode orReplace
-```
+Semantic view YAML files contain `base_table` references pointing to the underlying data tables. These are **not** rewritten during dev deploys because the data tables are shared -- only the semantic view object itself is created in the dev schema. Procedure DDL is rewritten to the target schema.
 
-### Working with Agent Configs
+### Scripts Reference
 
-Agent configs are modeled by `AgentConfig` in `src/cortex_agent/model/agent_config.py`. A typical YAML file (e.g. `bigbangbev.yaml`) includes:
+#### export_agent.py
 
-- **name** – the agent name in Snowflake.
-- **models.orchestration** – underlying model (e.g. `openai-gpt-4.1`).
-- **instructions** – response/orchestration/system instructions and sample questions.
-- **tools** – tool specs (e.g. `cortex_analyst_text_to_sql`, `generic` tools).
-- **tool_resources** – execution environments, semantic views, and procedure identifiers.
+Exports the agent config, semantic view YAML definitions (via `SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW`), and procedure DDL (via `GET_DDL`) to the `configs/` directory.
 
-You can edit these YAML files directly, commit them to version control, and redeploy.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--agent` | `CORTEX_AGENT_NAME` env var | Agent name to export from Snowflake |
+| `--database` | `SNOWFLAKE_DATABASE` env var | Source database |
+| `--schema` | `SNOWFLAKE_SCHEMA` env var | Source schema |
 
-### Example: BIGBANGBEV Agent
+#### deploy_agent.py
 
-The sample config `configs/agents/bigbangbev.yaml` defines a **sales analytics assistant** for Big Bang Beverages that:
+Deploys semantic views (via `SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), procedures (DDL execution), and the agent config -- in that order.
 
-- Uses an LLM (`openai-gpt-4.1`) orchestrated by Cortex Agents.
-- Connects to Snowflake semantic views for sales, promotions, and inventory.
-- Provides RGM-style insights and can send summary emails via a `send_email` stored procedure.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | `configs/agent_config.yaml` | Path to the YAML config file |
+| `--agent` | `name` field in config YAML | Override agent name for deployment |
+| `--database` | `SNOWFLAKE_DATABASE` env var | Target database |
+| `--schema` | `SNOWFLAKE_SCHEMA` env var | Target schema |
+| `--mode` | `orReplace` | `orReplace`, `ifNotExists`, `errorIfExists` |
 
-Use it as a template when creating new agents for your own data models.
+#### create_workspace.py
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--developer` | *(required)* | Developer username (becomes `DEV_<DEVELOPER>` schema) |
+| `--database` | `SNOWFLAKE_DATABASE` env var | Target database |
+| `--config` | `configs/agent_config.yaml` | Agent config to deploy into workspace |
+
+#### cleanup_workspace.py
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--developer` | *(required)* | Developer username (maps to `DEV_<DEVELOPER>` schema) |
+| `--database` | `SNOWFLAKE_DATABASE` env var | Target database |
+
+### GitHub Actions Secrets
+
+The following secrets must be configured in the repository:
+
+| Secret | Description |
+|--------|-------------|
+| `CORTEX_AGENT_NAME` | Canonical agent name |
+| `SNOWFLAKE_ACCOUNT` | Snowflake account identifier |
+| `SNOWFLAKE_USER` | Snowflake username |
+| `SNOWFLAKE_PRIVATE_KEY` | RSA private key contents (PEM) |
+| `SNOWFLAKE_ROLE` | Snowflake role |
+| `SNOWFLAKE_WAREHOUSE` | Snowflake warehouse |
+| `SNOWFLAKE_DATABASE` | Canonical database |
+| `SNOWFLAKE_SCHEMA` | Canonical schema |
+
+Configure two GitHub Environments: **development** (for workspace create/cleanup) and **production** (for deploy, with required reviewers).
 
 ### Development Notes
 
-- The client in `rest_client.py` is intentionally **thin** and raises an error if the Snowflake REST API responds with a non-2xx status (showing up to 500 characters of the response body).
-- Extra fields in `ToolResource` are allowed (`extra="allow"`) so you can extend tool metadata without changing the model.
+- The client in `rest_client.py` is intentionally **thin** and raises on non-2xx status.
+- Extra fields in `ToolResource` are allowed (`extra="allow"`) for extensibility.
+- `rewrite_references` in `agent_config.py` does a recursive string replacement of `SOURCE_DB.SOURCE_SCHEMA` with `TARGET_DB.TARGET_SCHEMA` across the entire config dict.
+- Semantic views are exported/deployed via Snowflake system functions (`SYSTEM$READ_YAML_FROM_SEMANTIC_VIEW` / `SYSTEM$CREATE_SEMANTIC_VIEW_FROM_YAML`), not stage files or CLONE.
+- Procedure DDL is exported via `GET_DDL` and re-executed with schema rewriting on deploy.
 
 ### License
 
 Internal / proprietary. Do not distribute without permission.
-

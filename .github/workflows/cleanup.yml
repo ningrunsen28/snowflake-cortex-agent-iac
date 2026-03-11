@@ -1,38 +1,18 @@
 name: Cleanup Dev Workspace
 
 on:
-  pull_request:
-    types: [closed]
-  delete:
+  workflow_dispatch:
+    inputs:
+      developer:
+        description: "Developer identifier used when creating the workspace (maps to DEV_<DEVELOPER>)"
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  resolve-developer:
-    runs-on: ubuntu-latest
-    outputs:
-      developer: ${{ steps.resolve.outputs.developer }}
-      should_run: ${{ steps.resolve.outputs.should_run }}
-    steps:
-      - name: Resolve developer from event
-        id: resolve
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            DEVELOPER="${{ github.event.pull_request.user.login }}"
-            echo "developer=$DEVELOPER" >> "$GITHUB_OUTPUT"
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "delete" ] && [ "${{ github.event.ref_type }}" = "branch" ]; then
-            DEVELOPER="${{ github.actor }}"
-            echo "developer=$DEVELOPER" >> "$GITHUB_OUTPUT"
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-          fi
-
   cleanup:
-    needs: resolve-developer
-    if: needs.resolve-developer.outputs.should_run == 'true'
     runs-on: ubuntu-latest
     environment: development
 
@@ -62,6 +42,6 @@ jobs:
           SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
         run: |
-          DEVELOPER="${{ needs.resolve-developer.outputs.developer }}"
+          DEVELOPER="${{ inputs.developer }}"
           echo "Cleaning up workspace for developer: $DEVELOPER"
           python scripts/cleanup_workspace.py --developer "$DEVELOPER"
