@@ -53,14 +53,14 @@ jobs:
 
       - name: Cleanup workspace
         env:
-          CORTEX_AGENT_NAME: ${{ secrets.CORTEX_AGENT_NAME }}
+          CORTEX_AGENT_NAME: ${{ vars.CORTEX_AGENT_NAME }}
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/rsa_key.pem
-          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
-          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DATABASE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
         run: |
           DEVELOPER="${{ needs.resolve-developer.outputs.developer }}"
           echo "Cleaning up workspace for developer: $DEVELOPER"
