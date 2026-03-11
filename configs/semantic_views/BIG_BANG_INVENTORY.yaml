@@ -1,0 +1,287 @@
+name: BIG_BANG_INVENTORY
+tables:
+  - name: INVENTORY_OH
+    synonyms:
+      - inventory
+      - in_stock
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: INVENTORY_OH
+    unique_keys:
+      - columns:
+          - STORE_ID
+      - columns:
+          - PRODUCT_ID
+      - columns:
+          - INVENTORY_DATE
+    dimensions:
+      - name: PRODUCT_ID
+        synonyms:
+          - product_number
+        expr: PRODUCT_ID
+        data_type: VARCHAR(200)
+      - name: STORE_ID
+        synonyms:
+          - store_number
+          - location_id
+          - retail_store_id
+          - store_code
+          - store_identifier
+        description: Unique identifier for the store where the inventory is located.
+        expr: STORE_ID
+        data_type: VARCHAR(200)
+        sample_values:
+          - "1004"
+          - "1002"
+          - "1006"
+    facts:
+      - name: ON_HAND_AMOUNT
+        synonyms:
+          - available_stock
+          - current_inventory
+          - in_stock_quantity
+          - inventory_level
+          - quantity_on_hand
+          - stock_level
+          - stock_quantity
+        description: The quantity of a specific product or item that is currently available in stock and ready for sale or use at the start of the month.
+        expr: ON_HAND_AMOUNT
+        data_type: "NUMBER(5,0)"
+        access_modifier: public_access
+        sample_values:
+          - "934"
+          - "1748"
+          - "3439"
+      - name: ON_ORDER_AMOUNT
+        synonyms:
+          - inventory_on_order
+          - quantity_on_order
+          - pending_arrivals
+          - backordered_amount
+          - amount_on_backorder
+          - quantity_pending_delivery
+        description: The quantity of the item that is currently on order from suppliers at the start of the month
+        expr: ON_ORDER_AMOUNT
+        data_type: "NUMBER(5,0)"
+        access_modifier: public_access
+        sample_values:
+          - "306"
+          - "65"
+          - "507"
+    time_dimensions:
+      - name: INVENTORY_DATE
+        synonyms:
+          - stock_date
+          - inventory_timestamp
+          - stock_update_date
+          - warehouse_date
+          - storage_date
+          - product_availability_date
+        description: "Date of inventory snapshot, representing the point in time when the inventory levels were recorded."
+        expr: INVENTORY_DATE
+        data_type: DATE
+        sample_values:
+          - 2024-01-01
+          - 2024-03-01
+          - 2024-05-01
+  - name: PRODUCT_DATA_CLEAN
+    synonyms:
+      - product
+      - item
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: PRODUCT_DATA_CLEAN
+    unique_keys:
+      - columns:
+          - PRODUCT_ID
+    dimensions:
+      - name: BRAND_NAME
+        synonyms:
+          - brand
+          - label
+        description: "The brand name of the product, indicating the manufacturer or brand owner."
+        expr: BRAND_NAME
+        data_type: VARCHAR(200)
+        sample_values:
+          - Jolt
+          - Bolt
+          - HydrateMax
+      - name: PRODUCT_ID
+        synonyms:
+          - product_code
+          - item_id
+          - product_number
+          - sku
+          - item_code
+          - product_key
+          - product_identifier
+        description: Unique identifier for each product in the catalog.
+        expr: PRODUCT_ID
+        data_type: VARCHAR(200)
+        sample_values:
+          - DRK-005
+          - DRK-002
+          - DRK-035
+      - name: PRODUCT_NAME
+        synonyms:
+          - item_name
+          - product_title
+          - product_description
+          - item_description
+          - product_label
+        description: "The name of the product, including flavor and size."
+        expr: PRODUCT_NAME
+        data_type: VARCHAR(200)
+        sample_values:
+          - Jolt Electric Berry 12 oz
+          - HydrateMax Cherry Rush 20 oz
+          - HydrateMax Glacier Freeze 20 oz
+      - name: PRODUCT_TYPE
+        synonyms:
+          - item_category
+          - product_classification
+          - product_group
+          - product_class
+          - category_name
+          - item_type
+          - product_style
+        description: "The type of product being sold, categorized as either a Sports Drink, Energy Drink, or Health Drink."
+        expr: PRODUCT_TYPE
+        data_type: VARCHAR(200)
+        sample_values:
+          - Sports Drink
+          - Energy Drink
+          - Health Drink
+  - name: STORE_DATA
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: STORE_DATA
+    unique_keys:
+      - columns:
+          - STORE_ID
+    dimensions:
+      - name: METROPOLITAN_AREA
+        synonyms:
+          - metro_area
+          - urban_area
+          - metropolitan_region
+        description: "The metropolitan area where a store is located, indicating the city or region in which the store operates."
+        expr: METROPOLITAN_AREA
+        data_type: VARCHAR(100)
+        sample_values:
+          - Atlanta
+          - Denver
+          - Chicago
+      - name: STORE_CHAIN_NAME
+        synonyms:
+          - retailer_name
+          - store_brand
+          - store_affiliation
+          - parent_company
+          - store_group
+          - retail_chain
+          - store_family
+          - franchise_name
+        description: "The name of the retail store chain where the data was collected, such as Kroger, Target, or Walgreens."
+        expr: STORE_CHAIN_NAME
+        data_type: VARCHAR(100)
+        sample_values:
+          - Kroger
+          - Target
+          - Walgreens
+      - name: STORE_ID
+        synonyms:
+          - store_number
+          - store_code
+          - store_identifier
+        description: Unique identifier for a store location.
+        expr: STORE_ID
+        data_type: VARCHAR(100)
+        sample_values:
+          - "1004"
+          - "2006"
+          - "5001"
+      - name: STORE_NAME
+        synonyms:
+          - store_title
+          - retail_name
+          - shop_name
+          - outlet_name
+          - business_name
+        description: "The name of the store along with its unique identifier, providing a way to distinguish between different store locations."
+        expr: STORE_NAME
+        data_type: VARCHAR(100)
+        sample_values:
+          - Kroger 361
+          - Walgreens Denver 1
+          - Sam's Club 7
+relationships:
+  - name: PRODUCT_INVENTORY
+    left_table: PRODUCT_DATA_CLEAN
+    right_table: INVENTORY_OH
+    relationship_columns:
+      - left_column: PRODUCT_ID
+        right_column: PRODUCT_ID
+  - name: STORE_INVENTORY
+    left_table: STORE_DATA
+    right_table: INVENTORY_OH
+    relationship_columns:
+      - left_column: STORE_ID
+        right_column: STORE_ID
+module_custom_instructions:
+  sql_generation: |-
+    out of stock means that inventory on hand is 0
+    on order issues means that ON_ORDER_AMOUNT is 0
+verified_queries:
+  - name: '"Which stores are experiencing out of stock issues this month?"'
+    sql: |-
+      SELECT
+        s.store_id,
+        s.store_name,
+        s.store_chain_name,
+        s.metropolitan_area,
+        COUNT(DISTINCT i.product_id) AS out_of_stock_products
+      FROM
+        inventory_oh AS i
+        INNER JOIN store_data AS s ON s.store_id = i.store_id
+      WHERE
+        i.on_hand_amount = 0
+        AND DATE_TRUNC('MONTH', i.inventory_date) = DATE_TRUNC('MONTH', CURRENT_DATE)
+      GROUP BY
+        s.store_id,
+        s.store_name,
+        s.store_chain_name,
+        s.metropolitan_area
+      ORDER BY
+        out_of_stock_products DESC NULLS LAST
+    question: Which stores are experiencing out of stock issues this month?
+    verified_at: 1757526470
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false
+  - name: '"which stores have 0 inventory on order?"'
+    sql: |-
+      SELECT
+        s.store_id,
+        s.store_name,
+        s.store_chain_name,
+        s.metropolitan_area,
+        COUNT(DISTINCT i.product_id) AS products_with_zero_on_order
+      FROM
+        inventory_oh AS i
+        INNER JOIN store_data AS s ON s.store_id = i.store_id
+      WHERE
+        i.on_order_amount = 0
+      GROUP BY
+        s.store_id,
+        s.store_name,
+        s.store_chain_name,
+        s.metropolitan_area
+      ORDER BY
+        products_with_zero_on_order DESC NULLS LAST
+    question: which stores have 0 inventory on order?
+    verified_at: 1757526702
+    verified_by: MICHAEL VOLLMER
+    use_as_onboarding_question: false

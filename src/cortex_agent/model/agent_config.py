@@ -156,3 +156,42 @@ def normalize(config: AgentConfig) -> dict[str, Any]:
         if key not in ordered:
             ordered[key] = raw[key]
     return ordered
+
+
+# ------------------------------------------------------------------
+# Reference rewriting
+# ------------------------------------------------------------------
+
+
+def rewrite_references(
+    data: dict[str, Any],
+    source_db: str,
+    source_schema: str,
+    target_db: str,
+    target_schema: str,
+) -> dict[str, Any]:
+    """Swap fully-qualified ``DB.SCHEMA`` prefixes in every string value.
+
+    Walks the entire config dict recursively and replaces occurrences of
+    ``SOURCE_DB.SOURCE_SCHEMA`` with ``TARGET_DB.TARGET_SCHEMA``.  This
+    rewrites ``semantic_view``, ``identifier``, ``semantic_model_file``,
+    and any other field that contains a fully-qualified Snowflake name.
+
+    Returns a **new** dict; the original is not mutated.
+    """
+    src = f"{source_db.upper()}.{source_schema.upper()}"
+    tgt = f"{target_db.upper()}.{target_schema.upper()}"
+
+    if src == tgt:
+        return data
+
+    def _walk(obj: Any) -> Any:
+        if isinstance(obj, str):
+            return obj.replace(src, tgt)
+        if isinstance(obj, dict):
+            return {k: _walk(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_walk(item) for item in obj]
+        return obj
+
+    return _walk(data)

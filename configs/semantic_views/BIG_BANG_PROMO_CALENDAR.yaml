@@ -1,0 +1,79 @@
+name: BIG_BANG_PROMO_CALENDAR
+description: Promotion details for big bang beverages
+tables:
+  - name: PROMOTIONS
+    synonyms:
+      - promotions
+      - offers
+      - discounts
+      - sales
+      - specials
+      - deals
+      - advertisements
+      - marketing_campaigns
+      - promo_offers
+      - limited_time_offers
+    description: "This table stores information about promotional campaigns run by various brands in different metropolitan areas, including the promotion name, start and end dates, and the brand name."
+    base_table:
+      database: SNOWFLAKE_AI_DEMO
+      schema: SALES_MART
+      table: PROMOTIONS
+    dimensions:
+      - name: BRAND_NAME
+        synonyms:
+          - brand
+        description: The brand name of the product being promoted.
+        expr: BRAND_NAME
+        data_type: VARCHAR(200)
+        sample_values:
+          - Electrolyte
+          - Pure Vida
+          - HydrateMax
+      - name: METROPOLITAN_AREA
+        synonyms:
+          - urban_area
+          - metro_area
+          - metropolitan_region
+          - urban_region
+          - metropolitan_district
+          - region
+          - msa
+          - territory
+        description: "The metropolitan area where the promotion is being offered, indicating the specific geographic region targeted by the promotion."
+        expr: METROPOLITAN_AREA
+        data_type: VARCHAR(100)
+        sample_values:
+          - Atlanta
+          - Chicago
+          - Miami
+      - name: PROMOTION_NAME
+        synonyms:
+          - campaign_name
+          - promo_name
+          - offer_name
+          - marketing_campaign
+          - advertisement_name
+          - sales_promotion
+          - special_offer
+          - deal_name
+        description: "The name of a specific promotional campaign or offer, used to track and analyze the effectiveness of different marketing initiatives."
+        expr: PROMOTION_NAME
+        data_type: VARCHAR(200)
+        sample_values:
+          - HydrateMax 2025 Summer Promo
+          - Electrolyte 2025 Summer
+          - Pure Vida 2025 Q1
+    time_dimensions:
+      - name: PROMOTION_DATE_END
+        synonyms:
+          - promotion_end_date
+        description: The date when a promotion officially ends.
+        expr: PROMOTION_DATE_END
+        data_type: DATE
+      - name: PROMOTION_DATE_START
+        synonyms:
+          - promotion_launch_date
+          - start_of_promotion
+        description: The date when a promotion starts.
+        expr: PROMOTION_DATE_START
+        data_type: DATE

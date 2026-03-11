@@ -110,9 +110,57 @@ class CortexAgentClient:
         self._raise_for_status(resp)
         return resp.json()
 
+    # ------------------------------------------------------------------
+    # SQL execution (Snowflake SQL API)
+    # ------------------------------------------------------------------
 
-def _load_env():
-    """Load .env file and return a helper to require env vars."""
+    def execute_sql(
+        self,
+        statement: str,
+        *,
+        database: str | None = None,
+        schema: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute a SQL statement via the Snowflake SQL API.
+
+        Uses the client's database/schema/warehouse by default; callers
+        can override database and schema per call.
+        """
+        url = f"https://{self._account}.snowflakecomputing.com/api/v2/statements"
+        body: dict[str, Any] = {
+            "statement": statement,
+            "timeout": 60,
+            "database": database or self._database,
+            "schema": schema or self._schema,
+        }
+        if self._warehouse:
+            body["warehouse"] = self._warehouse
+
+        resp = requests.post(url, headers=self._headers(), json=body)
+        self._raise_for_status(resp)
+        return resp.json()
+
+    def query_scalar(
+        self,
+        statement: str,
+        *,
+        database: str | None = None,
+        schema: str | None = None,
+    ) -> str:
+        """Execute a SQL query and return the first column of the first row."""
+        result = self.execute_sql(
+            statement,
+            database=database,
+            schema=schema,
+        )
+        rows = result.get("data", [])
+        if not rows or not rows[0]:
+            raise RuntimeError(f"Query returned no data: {statement[:120]}")
+        return rows[0][0]
+
+
+def _load_env() -> tuple:
+    """Load .env file and return ``(os_module, require_fn)``."""
     import os
 
     from dotenv import load_dotenv
@@ -130,20 +178,39 @@ def _load_env():
 
 def agent_name_from_env() -> str:
     """Read the agent name from the CORTEX_AGENT_NAME env var."""
-    os, _require = _load_env()
+    _, _require = _load_env()
     return _require("CORTEX_AGENT_NAME")
 
 
-def client_from_env() -> CortexAgentClient:
-    """Build a CortexAgentClient from environment variables / .env file."""
+def canonical_db_schema_from_env() -> tuple[str, str]:
+    """Return the canonical ``(database, schema)`` from env vars.
+
+    These represent the *production* database and schema that the YAML
+    in git is written against.  Used by deploy/export to detect when
+    reference rewriting is needed.
+    """
+    _, _require = _load_env()
+    return _require("SNOWFLAKE_DATABASE"), _require("SNOWFLAKE_SCHEMA")
+
+
+def client_from_env(
+    *,
+    database: str | None = None,
+    schema: str | None = None,
+) -> CortexAgentClient:
+    """Build a CortexAgentClient from environment variables / .env file.
+
+    *database* and *schema* override the corresponding env vars when
+    provided (e.g. from CLI args in a CI pipeline).
+    """
     os, _require = _load_env()
 
     return CortexAgentClient(
         account=_require("SNOWFLAKE_ACCOUNT"),
         user=_require("SNOWFLAKE_USER"),
         private_key_path=_require("SNOWFLAKE_PRIVATE_KEY_PATH"),
-        database=_require("SNOWFLAKE_DATABASE"),
-        schema=_require("SNOWFLAKE_SCHEMA"),
+        database=database or _require("SNOWFLAKE_DATABASE"),
+        schema=schema or _require("SNOWFLAKE_SCHEMA"),
         role=os.environ.get("SNOWFLAKE_ROLE"),
         warehouse=os.environ.get("SNOWFLAKE_WAREHOUSE"),
     )

@@ -1,0 +1,43 @@
+name: Validate PR
+
+on:
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - "configs/agent_config.yaml"
+      - "src/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Validate agent config
+        run: |
+          python -c "
+          from cortex_agent.io.serialize import read_yaml
+          from cortex_agent.model.agent_config import AgentConfig
+
+          spec = read_yaml('configs/agent_config.yaml')
+          config = AgentConfig.model_validate(spec)
+          print(f'Config valid: agent={config.name!r}')
+
+          if config.tools:
+              print(f'  tools: {len(config.tools)}')
+          if config.tool_resources:
+              print(f'  tool_resources: {list(config.tool_resources.keys())}')
+          "
