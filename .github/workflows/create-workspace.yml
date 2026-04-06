@@ -11,9 +11,13 @@ on:
         description: "Target database (leave empty to use SNOWFLAKE_DATABASE secret)"
         required: false
         type: string
+      branch_name:
+        description: "Feature branch name (defaults to dev/<developer>)"
+        required: false
+        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   create:
@@ -23,6 +27,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Create feature branch
+        run: |
+          BRANCH="${{ inputs.branch_name || format('dev/{0}', inputs.developer) }}"
+          git checkout -b "$BRANCH"
+          git push origin "$BRANCH"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
