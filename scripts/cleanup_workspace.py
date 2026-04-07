@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Tear down a development workspace created by create_workspace.py.
 
-Drops the dev agent and then the entire DEV_<DEVELOPER> schema
-(CASCADE), removing all cloned semantic views and procedures.
+Drops the dev agent and then the entire dev schema (CASCADE), removing
+all cloned semantic views and procedures.
 
 Usage:
-    python scripts/cleanup_workspace.py --developer runsen
+    python scripts/cleanup_workspace.py --schema DEV_ADD_SALES_TOOL --agent BIGBANGBEV_DEV_ADD_SALES_TOOL
 
     python scripts/cleanup_workspace.py \
-        --developer runsen \
-        --database SNOWFLAKE_AI_DEMO
+        --schema DEV_ADD_SALES_TOOL \
+        --agent BIGBANGBEV_DEV_ADD_SALES_TOOL \
+        --database MY_DATABASE
 """
 
 from __future__ import annotations
@@ -17,18 +18,9 @@ from __future__ import annotations
 import argparse
 
 from cortex_agent.snowflake.rest_client import (
-    agent_name_from_env,
     canonical_db_schema_from_env,
     client_from_env,
 )
-
-
-def _dev_schema(developer: str) -> str:
-    return f"DEV_{developer.upper()}"
-
-
-def _dev_agent_name(canonical_name: str, developer: str) -> str:
-    return f"{canonical_name}_DEV_{developer.upper()}"
 
 
 def main() -> None:
@@ -36,9 +28,14 @@ def main() -> None:
         description="Tear down a dev workspace (agent + schema).",
     )
     parser.add_argument(
-        "--developer",
+        "--schema",
         required=True,
-        help="Developer username (maps to DEV_<DEVELOPER> schema).",
+        help="Dev schema to drop (e.g. DEV_ADD_SALES_TOOL).",
+    )
+    parser.add_argument(
+        "--agent",
+        required=True,
+        help="Dev agent name to drop (e.g. BIGBANGBEV_DEV_ADD_SALES_TOOL).",
     )
     parser.add_argument(
         "--database",
@@ -48,26 +45,22 @@ def main() -> None:
 
     canonical_db, _ = canonical_db_schema_from_env()
     target_db = args.database or canonical_db
-    dev_schema = _dev_schema(args.developer)
 
-    client = client_from_env(database=target_db, schema=dev_schema)
+    client = client_from_env(database=target_db, schema=args.schema)
 
     # ---- 1. Drop the dev agent ---------------------------------------
-    canonical_agent = agent_name_from_env()
-    dev_agent = _dev_agent_name(canonical_agent, args.developer)
-
-    print(f"Dropping agent '{dev_agent}' ...")
+    print(f"Dropping agent '{args.agent}' ...")
     try:
-        client.delete(dev_agent, if_exists=True)
+        client.delete(args.agent, if_exists=True)
         print("  -> deleted")
     except RuntimeError as exc:
         print(f"  Warning: {exc}")
 
     # ---- 2. Drop the dev schema (cascade) ----------------------------
-    print(f"Dropping schema {target_db}.{dev_schema} CASCADE ...")
+    print(f"Dropping schema {target_db}.{args.schema} CASCADE ...")
     try:
         client.execute_sql(
-            f"DROP SCHEMA IF EXISTS {target_db}.{dev_schema} CASCADE",
+            f"DROP SCHEMA IF EXISTS {target_db}.{args.schema} CASCADE",
             database=target_db,
         )
         print("  -> dropped")

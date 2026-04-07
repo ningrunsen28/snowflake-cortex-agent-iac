@@ -1,0 +1,81 @@
+name: Dev - Pull Configs from Snowflake
+
+# Exports the Snowflake dev agent config back to the feature branch.
+# Use this when you've made changes directly in Snowflake and want to pull them into git.
+# Schema is derived from the branch name: feat/add-sales-tool -> DEV_ADD_SALES_TOOL
+# Run this workflow from your feature branch.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    environment: development
+    if: contains(github.ref_name, '/')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Derive dev schema from branch name
+        id: schema
+        run: |
+          BRANCH="${{ github.ref_name }}"
+          TASK="${BRANCH#*/}"
+          DEV_SCHEMA="${{ vars.DEV_SCHEMA_PREFIX }}_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
+          DEV_AGENT="${{ vars.CORTEX_AGENT_NAME }}_${DEV_SCHEMA}"
+          echo "dev_schema=${DEV_SCHEMA}" >> $GITHUB_OUTPUT
+          echo "dev_agent=${DEV_AGENT}" >> $GITHUB_OUTPUT
+          echo "Branch:     $BRANCH"
+          echo "Dev schema: $DEV_SCHEMA"
+          echo "Dev agent:  $DEV_AGENT"
+
+      - name: Set up Snowflake
+        uses: ./.github/actions/snowflake-setup
+        with:
+          private-key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+
+      - name: Export configs from dev schema
+        env:
+          CORTEX_AGENT_NAME: ${{ vars.CORTEX_AGENT_NAME }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/rsa_key.pem
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
+        run: |
+          python scripts/export_agent.py \
+            --schema ${{ steps.schema.outputs.dev_schema }} \
+            --agent ${{ steps.schema.outputs.dev_agent }}
+
+      - name: Commit and push exported configs
+        run: |
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git add configs/
+          if git diff --staged --quiet; then
+            echo "No changes to commit — configs are already up to date."
+          else
+            git commit -m "chore: pull agent config from ${{ steps.schema.outputs.dev_schema }}"
+            git push origin "${{ github.ref_name }}"
+            echo "Changes pushed to ${{ github.ref_name }}"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Configs Pulled" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Schema | \`${{ steps.schema.outputs.dev_schema }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agent  | \`${{ steps.schema.outputs.dev_agent }}\` |" >> $GITHUB_STEP_SUMMARY

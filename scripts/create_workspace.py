@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 """Create a development workspace for Cortex Agent development.
 
-Creates a dev schema (DEV_<DEVELOPER>) in the target database, deploys
-semantic views and procedures from the repo config files, and deploys
-the agent config with references rewritten to the dev schema.
+Creates a dev schema in the target database, deploys semantic views and
+procedures from the repo config files, and deploys the agent config with
+references rewritten to the dev schema.
 
 All objects are created from the repo files -- no Snowflake-to-Snowflake
 cloning is needed.
 
 Usage:
-    python scripts/create_workspace.py --developer runsen
+    python scripts/create_workspace.py --schema DEV_ADD_SALES_TOOL --agent BIGBANGBEV_DEV_ADD_SALES_TOOL
 
     python scripts/create_workspace.py \
-        --developer runsen \
-        --database SNOWFLAKE_AI_DEMO
+        --schema DEV_ADD_SALES_TOOL \
+        --agent BIGBANGBEV_DEV_ADD_SALES_TOOL \
+        --database MY_DATABASE
 """
 
 from __future__ import annotations
@@ -26,7 +27,6 @@ from cortex_agent.deploy import deploy_dependencies
 from cortex_agent.io.serialize import read_yaml
 from cortex_agent.model.agent_config import AgentConfig, rewrite_references
 from cortex_agent.snowflake.rest_client import (
-    agent_name_from_env,
     canonical_db_schema_from_env,
     client_from_env,
 )
@@ -36,22 +36,19 @@ CONFIGS_DIR = PROJECT_ROOT / "configs"
 DEFAULT_CONFIG = CONFIGS_DIR / "agent_config.yaml"
 
 
-def _dev_schema(developer: str) -> str:
-    return f"DEV_{developer.upper()}"
-
-
-def _dev_agent_name(canonical_name: str, developer: str) -> str:
-    return f"{canonical_name}_DEV_{developer.upper()}"
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Create a dev workspace (schema + semantic views + procedures + agent).",
     )
     parser.add_argument(
-        "--developer",
+        "--schema",
         required=True,
-        help="Developer username (becomes DEV_<DEVELOPER> schema).",
+        help="Target dev schema name (e.g. DEV_ADD_SALES_TOOL).",
+    )
+    parser.add_argument(
+        "--agent",
+        required=True,
+        help="Dev agent name (e.g. BIGBANGBEV_DEV_ADD_SALES_TOOL).",
     )
     parser.add_argument(
         "--database",
@@ -71,14 +68,13 @@ def main() -> None:
 
     canonical_db, canonical_schema = canonical_db_schema_from_env()
     target_db = args.database or canonical_db
-    dev_schema = _dev_schema(args.developer)
 
-    client = client_from_env(database=target_db, schema=dev_schema)
+    client = client_from_env(database=target_db, schema=args.schema)
 
     # ---- 1. Create dev schema ----------------------------------------
-    print(f"Creating schema {target_db}.{dev_schema} ...")
+    print(f"Creating schema {target_db}.{args.schema} ...")
     client.execute_sql(
-        f"CREATE SCHEMA IF NOT EXISTS {target_db}.{dev_schema}",
+        f"CREATE SCHEMA IF NOT EXISTS {target_db}.{args.schema}",
         database=target_db,
     )
 
@@ -88,7 +84,7 @@ def main() -> None:
         client,
         CONFIGS_DIR,
         target_db,
-        dev_schema,
+        args.schema,
         canonical_db,
         canonical_schema,
     )
@@ -100,19 +96,17 @@ def main() -> None:
         canonical_db,
         canonical_schema,
         target_db,
-        dev_schema,
+        args.schema,
     )
     dev_config = AgentConfig.model_validate(data)
-
-    canonical_agent = agent_name_from_env()
-    dev_config.name = _dev_agent_name(canonical_agent, args.developer)
+    dev_config.name = args.agent
 
     body = dev_config.to_create_body()
     print(f"Deploying dev agent '{dev_config.name}' ...")
     result = client.create(body, create_mode="orReplace")
     print(f"  -> {result}")
 
-    print(f"\nWorkspace ready:  {target_db}.{dev_schema}")
+    print(f"\nWorkspace ready:  {target_db}.{args.schema}")
     print(f"Dev agent:        {dev_config.name}")
     print("Done.")
 

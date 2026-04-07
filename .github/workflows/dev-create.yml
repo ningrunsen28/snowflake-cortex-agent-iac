@@ -1,0 +1,73 @@
+name: Dev - Create Workspace
+
+# Creates a Snowflake dev schema and a feature branch from the branch name.
+# Schema is derived from the branch name: feat/add-sales-tool -> DEV_ADD_SALES_TOOL
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: "Feature branch name (e.g. feat/add-sales-tool, fix/broken-procedure)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive dev schema from branch name
+        id: schema
+        run: |
+          BRANCH="${{ inputs.branch_name }}"
+          TASK="${BRANCH#*/}"
+          DEV_SCHEMA="${{ vars.DEV_SCHEMA_PREFIX }}_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
+          DEV_AGENT="${{ vars.CORTEX_AGENT_NAME }}_${DEV_SCHEMA}"
+          echo "dev_schema=${DEV_SCHEMA}" >> $GITHUB_OUTPUT
+          echo "dev_agent=${DEV_AGENT}" >> $GITHUB_OUTPUT
+          echo "Branch:     $BRANCH"
+          echo "Dev schema: $DEV_SCHEMA"
+          echo "Dev agent:  $DEV_AGENT"
+
+      - name: Create feature branch
+        run: |
+          git checkout -b "${{ inputs.branch_name }}"
+          git push origin "${{ inputs.branch_name }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Snowflake
+        uses: ./.github/actions/snowflake-setup
+        with:
+          private-key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+
+      - name: Create workspace
+        env:
+          CORTEX_AGENT_NAME: ${{ vars.CORTEX_AGENT_NAME }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/rsa_key.pem
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
+        run: |
+          python scripts/create_workspace.py \
+            --schema ${{ steps.schema.outputs.dev_schema }} \
+            --agent ${{ steps.schema.outputs.dev_agent }}
+
+      - name: Summary
+        run: |
+          echo "## Workspace Created" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ inputs.branch_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Schema | \`${{ steps.schema.outputs.dev_schema }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agent  | \`${{ steps.schema.outputs.dev_agent }}\` |" >> $GITHUB_STEP_SUMMARY
