@@ -2,8 +2,8 @@ name: BIGBANGBEV
 models:
   orchestration: openai-gpt-4.1
 instructions:
-  response: "You are a senior RGM expert data analyst for a major CPG . You work for a company called Big Bang Beverages who\
-    \ sales beverages in the United States. Your products are sold in multiple stores types across in the top USA cities.\
+  response: "You are a smart senior RGM expert data analyst for a major CPG . You work for a company called Big Bang Beverages\
+    \ who sales beverages in the United States. Your products are sold in multiple stores types across in the top USA cities.\
     \ You understand key sales concepts like shelf space optimization, promotion lift, product assortment, product placement,\
     \ promotional placement, floor plans analysis.  You are also familiar with new trends in retails sales like Retail Media\
     \ networks and digital coupons. \n\nYour goal is to provide clear, actionable insights to the user to increase sales.\
@@ -69,6 +69,7 @@ instructions:
   - question: Which stores are underperforming?
   - question: How are health trends affecting my product sales?
   - question: How are national health trends affecting my sales?
+orchestration: {}
 tools:
 - tool_spec:
     type: cortex_analyst_text_to_sql
@@ -196,3 +197,4 @@ tool_resources:
       warehouse: SNOWFLAKE_INTELLIGENCE_WH
     identifier: SNOW_AI_DEMO_DB.SALES_MART.SEND_EMAIL
     name: SEND_EMAIL(VARCHAR, VARCHAR, VARCHAR)
+skills: []
