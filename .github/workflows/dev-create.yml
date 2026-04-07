@@ -28,7 +28,7 @@ jobs:
         run: |
           BRANCH="${{ inputs.branch_name }}"
           TASK="${BRANCH#*/}"
-          DEV_SCHEMA="DEV_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
+          DEV_SCHEMA="${{ vars.DEV_SCHEMA_PREFIX }}_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
           DEV_AGENT="${{ vars.CORTEX_AGENT_NAME }}_${DEV_SCHEMA}"
           echo "dev_schema=${DEV_SCHEMA}" >> $GITHUB_OUTPUT
           echo "dev_agent=${DEV_AGENT}" >> $GITHUB_OUTPUT

@@ -19,6 +19,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     environment: development
+    if: contains(github.ref_name, '/')
 
     steps:
       - name: Checkout
@@ -29,7 +30,7 @@ jobs:
         run: |
           BRANCH="${{ github.ref_name }}"
           TASK="${BRANCH#*/}"
-          DEV_SCHEMA="DEV_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
+          DEV_SCHEMA="${{ vars.DEV_SCHEMA_PREFIX }}_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
           DEV_AGENT="${{ vars.CORTEX_AGENT_NAME }}_${DEV_SCHEMA}"
           echo "dev_schema=${DEV_SCHEMA}" >> $GITHUB_OUTPUT
           echo "dev_agent=${DEV_AGENT}" >> $GITHUB_OUTPUT

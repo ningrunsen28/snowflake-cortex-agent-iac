@@ -21,12 +21,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     environment: development
-    # For PR events, skip branches that don't follow feat/fix/chore/etc. convention
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      contains(fromJSON('["feat", "fix", "chore", "refactor", "docs"]'),
-               github.event.pull_request.head.ref != '' &&
-               split(github.event.pull_request.head.ref, '/')[0])
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.head.ref, '/')
 
     steps:
       - name: Checkout
@@ -41,7 +36,7 @@ jobs:
             BRANCH="${{ inputs.branch_name }}"
           fi
           TASK="${BRANCH#*/}"
-          DEV_SCHEMA="DEV_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
+          DEV_SCHEMA="${{ vars.DEV_SCHEMA_PREFIX }}_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
           DEV_AGENT="${{ vars.CORTEX_AGENT_NAME }}_${DEV_SCHEMA}"
           echo "dev_schema=${DEV_SCHEMA}" >> $GITHUB_OUTPUT
           echo "dev_agent=${DEV_AGENT}" >> $GITHUB_OUTPUT

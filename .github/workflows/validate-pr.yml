@@ -18,13 +18,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Snowflake
+        uses: ./.github/actions/snowflake-setup
         with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -e .
+          private-key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
 
       - name: Validate agent config
         run: |
