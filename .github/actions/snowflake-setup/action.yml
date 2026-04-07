@@ -1,0 +1,23 @@
+name: Snowflake Setup
+description: Set up Python, install dependencies, and write Snowflake private key
+
+inputs:
+  private-key:
+    description: Snowflake private key content
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install dependencies
+      run: pip install -e .
+      shell: bash
+
+    - name: Write private key
+      run: echo "${{ inputs.private-key }}" > /tmp/rsa_key.pem
+      shell: bash

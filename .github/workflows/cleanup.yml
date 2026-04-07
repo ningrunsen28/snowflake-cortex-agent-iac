@@ -11,6 +11,8 @@ on:
         description: "Target database (leave empty to use SNOWFLAKE_DATABASE env var)"
         required: false
         type: string
+  pull_request:
+    types: [closed]
 
 permissions:
   contents: read
@@ -19,6 +21,7 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     environment: development
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.pull_request.head.ref, 'dev/')
 
     steps:
       - name: Checkout
@@ -46,9 +49,15 @@ jobs:
           SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
         run: |
-          args="--developer ${{ inputs.developer }}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.event.pull_request.head.ref }}"
+            DEVELOPER="${BRANCH#dev/}"
+          else
+            DEVELOPER="${{ inputs.developer }}"
+          fi
+          args="--developer $DEVELOPER"
           if [ -n "${{ inputs.database }}" ]; then
             args="$args --database ${{ inputs.database }}"
           fi
-          echo "Cleaning up workspace with args: $args"
+          echo "Cleaning up workspace for developer: $DEVELOPER"
           python scripts/cleanup_workspace.py $args

@@ -1,0 +1,78 @@
+name: Dev - Cleanup Workspace
+
+# Drops the Snowflake dev schema associated with a feature branch.
+# Triggers automatically when a PR is closed, or manually by providing the branch name.
+# Schema is derived from the branch name: feat/add-sales-tool -> DEV_ADD_SALES_TOOL
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_name:
+        description: "Feature branch to clean up (e.g. feat/add-sales-tool)"
+        required: true
+        type: string
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    environment: development
+    # For PR events, skip branches that don't follow feat/fix/chore/etc. convention
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      contains(fromJSON('["feat", "fix", "chore", "refactor", "docs"]'),
+               github.event.pull_request.head.ref != '' &&
+               split(github.event.pull_request.head.ref, '/')[0])
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive dev schema from branch name
+        id: schema
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH="${{ github.event.pull_request.head.ref }}"
+          else
+            BRANCH="${{ inputs.branch_name }}"
+          fi
+          TASK="${BRANCH#*/}"
+          DEV_SCHEMA="DEV_$(echo "${TASK//[-\/]/_}" | tr '[:lower:]' '[:upper:]')"
+          DEV_AGENT="${{ vars.CORTEX_AGENT_NAME }}_${DEV_SCHEMA}"
+          echo "dev_schema=${DEV_SCHEMA}" >> $GITHUB_OUTPUT
+          echo "dev_agent=${DEV_AGENT}" >> $GITHUB_OUTPUT
+          echo "Branch:     $BRANCH"
+          echo "Dev schema: $DEV_SCHEMA"
+          echo "Dev agent:  $DEV_AGENT"
+
+      - name: Set up Snowflake
+        uses: ./.github/actions/snowflake-setup
+        with:
+          private-key: ${{ secrets.SNOWFLAKE_PRIVATE_KEY }}
+
+      - name: Cleanup workspace
+        env:
+          CORTEX_AGENT_NAME: ${{ vars.CORTEX_AGENT_NAME }}
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/rsa_key.pem
+          SNOWFLAKE_ROLE: ${{ vars.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ vars.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ vars.SNOWFLAKE_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ vars.SNOWFLAKE_SCHEMA }}
+        run: |
+          python scripts/cleanup_workspace.py \
+            --schema ${{ steps.schema.outputs.dev_schema }} \
+            --agent ${{ steps.schema.outputs.dev_agent }}
+
+      - name: Summary
+        run: |
+          echo "## Workspace Cleaned Up" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Schema | \`${{ steps.schema.outputs.dev_schema }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agent  | \`${{ steps.schema.outputs.dev_agent }}\` |" >> $GITHUB_STEP_SUMMARY
