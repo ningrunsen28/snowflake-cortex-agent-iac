@@ -138,6 +138,7 @@ def main() -> None:
     source_schema = args.schema or canonical_schema
 
     agent_name = args.agent or agent_name_from_env()
+    canonical_agent = agent_name_from_env()
     client = client_from_env(database=args.database, schema=args.schema)
 
     # ---- 1. Export agent config --------------------------------------
@@ -148,10 +149,12 @@ def main() -> None:
     data = rewrite_references(
         data, source_db, source_schema, canonical_db, canonical_schema
     )
+    # Always write the canonical agent name — not the dev name
+    data["name"] = canonical_agent
 
     CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
     write_yaml(data, CONFIG_PATH)
-    print(f"  -> {CONFIG_PATH}")
+    print(f"  -> {CONFIG_PATH} (name normalized to '{canonical_agent}')")
 
     # ---- 2. Export semantic views ------------------------------------
     _export_semantic_views(client, config, source_db, source_schema)
